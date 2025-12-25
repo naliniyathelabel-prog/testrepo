@@ -32,3 +32,5 @@
 .modal-actions button{flex:1;padding:14px;border:none;border-radius:8px;font-size:16px;font-weight:600;cursor:pointer}
 .btn-secondary{background:#e0e0e0;color:#333}
 .btn-primary{background:#667eea;color:#fff}
+
+.hint-text{font-size:12px;color:#999;margin-top:4px}

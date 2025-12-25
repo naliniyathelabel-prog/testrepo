@@ -46,31 +46,40 @@ function App() {
 
     const userMsg = { role: 'user', text: input }
     setMessages(prev => [...prev, userMsg])
+    const currentInput = input
     setInput('')
     setLoading(true)
 
     try {
       const genAI = new GoogleGenerativeAI(config.apiKey)
-      const model = genAI.getGenerativeModel({ model: config.model })
+
+      // System instruction must be passed to getGenerativeModel
+      const modelConfig = {
+        model: config.model
+      }
+
+      // Only add systemInstruction if it exists and is not empty
+      if (config.systemPrompt && config.systemPrompt.trim()) {
+        modelConfig.systemInstruction = config.systemPrompt.trim()
+      }
+
+      const model = genAI.getGenerativeModel(modelConfig)
 
       const history = messages.map(m => ({
         role: m.role === 'user' ? 'user' : 'model',
         parts: [{ text: m.text }]
       }))
 
-      const chat = model.startChat({
-        history,
-        systemInstruction: config.systemPrompt || undefined
-      })
-
-      const result = await chat.sendMessage(input)
+      const chat = model.startChat({ history })
+      const result = await chat.sendMessage(currentInput)
       const response = result.response.text()
 
       setMessages(prev => [...prev, { role: 'model', text: response }])
     } catch (err) {
+      console.error('Gemini API Error:', err)
       setMessages(prev => [...prev, { 
         role: 'model', 
-        text: '❌ Error: ' + (err.message || 'Failed to get response')
+        text: '❌ Error: ' + (err.message || 'Failed to get response. Check API key and model.')
       }])
     } finally {
       setLoading(false)
@@ -151,9 +160,10 @@ function ConfigModal({ config, onSave, onClose }) {
         <textarea
           value={systemPrompt}
           onChange={e => setSystemPrompt(e.target.value)}
-          placeholder="You are a helpful assistant..."
+          placeholder="You are a helpful assistant that provides clear and concise answers."
           rows={4}
         />
+        <p className="hint-text">Leave empty for default behavior</p>
 
         <label>Gemini Model</label>
         <select value={model} onChange={e => setModel(e.target.value)}>
