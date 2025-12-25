@@ -1,64 +1,17 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Flonest ERP - Waitlist Live</title>
-    <style>
-        *{box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;margin:0;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
-        .container{max-width:500px;width:100%;background:white;border-radius:20px;box-shadow:0 20px 40px rgba(0,0,0,0.1);overflow:hidden}
-        .header{background:linear-gradient(135deg,#007bff,#0056b3);color:white;padding:40px 30px;text-align:center}
-        .counter{background:rgba(255,193,7,0.2);border:2px solid #ffc107;border-radius:50px;padding:10px 20px;font-size:1.5em;font-weight:bold;margin-bottom:20px;display:inline-block}
-        .form{padding:40px 30px}
-        .input-group{margin-bottom:20px}
-        input{width:100%;padding:15px;font-size:16px;border:2px solid #e9ecef;border-radius:12px;transition:all 0.3s}
-        input:focus{outline:none;border-color:#007bff;box-shadow:0 0 0 3px rgba(0,123,255,0.1)}
-        .submit-btn{width:100%;padding:15px;background:linear-gradient(135deg,#28a745,#20c997);color:white;border:none;border-radius:12px;font-size:16px;font-weight:600;cursor:pointer;transition:all 0.3s}
-        .submit-btn:hover{transform:translateY(-2px);box-shadow:0 10px 20px rgba(40,167,69,0.3)}
-        .features{padding:30px;text-align:center;color:#6c757d}
-        .badge{background:#28a745;color:white;padding:5px 15px;border-radius:20px;font-size:0.8em;font-weight:500;display:inline-block;margin:2px}
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Flonest Chat</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;overflow:hidden}
+    #root{width:100%;height:100vh}
+  </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>🚀 Flonest ERP</h1>
-            <p>India's smartest retail platform</p>
-            <div class="counter" id="counter">47</div>
-            <p>early users on waitlist</p>
-        </div>
-        <div class="form">
-            <form id="waitlistForm">
-                <div class="input-group">
-                    <input type="text" id="shop" placeholder="Your Shop Name" required>
-                </div>
-                <div class="input-group">
-                    <input type="email" id="email" placeholder="shop@email.com" required>
-                </div>
-                <div class="input-group">
-                    <input type="tel" id="phone" placeholder="WhatsApp Number" required>
-                </div>
-                <button type="submit" class="submit-btn">Join Waitlist →</button>
-            </form>
-        </div>
-        <div class="features">
-            <span class="badge">GST Ready</span>
-            <span class="badge">Multi-Store</span>
-            <span class="badge">Cloud Sync</span>
-        </div>
-    </div>
-
-    <script>
-        let counter = parseInt(localStorage.getItem('flonestCounter') || '47');
-        document.getElementById('counter').textContent = counter;
-
-        document.getElementById('waitlistForm').onsubmit = e => {
-            e.preventDefault();
-            counter++;
-            localStorage.setItem('flonestCounter', counter);
-            document.getElementById('counter').textContent = counter;
-            alert(`🎉 You're #${counter} on the waitlist!
-
-We'll ping you on WhatsApp when ready.`);
-        }
-    </script>
+  <div id="root"></div>
+  <script type="module" src="/src/main.jsx"></script>
 </body>
 </html>
