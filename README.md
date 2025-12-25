@@ -1,10 +1,18 @@
-# Flonest ERP ✅
-Multi-tenant Retail ERP for India
+# Flonest ERP ✅ LIVE DEMO
 
-**Features:**
-✅ GST Compliance  
-✅ Real-time Inventory  
-✅ Multi-store support  
-✅ Supabase + GCP  
+## Agent Edit #2: Waitlist Form + Counter
 
-[Live Demo → index.html]
+**Live Features:**
+- ✨ Real-time waitlist counter (localStorage)
+- ✨ Mobile-first responsive form  
+- ✨ WhatsApp-ready signup flow
+- ✨ Gradient UI (production polish)
+
+**Merge → Deploy:** Vercel/Netlify/GitHub Pages
+
+```
+npm i -g serve
+serve . 
+```
+
+**Agent Flow:** Idea → Edit → Push → Live in 60s

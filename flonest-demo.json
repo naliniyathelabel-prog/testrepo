@@ -1,6 +1,7 @@
 {
-  "demo": "success",
-  "features": ["gst", "inventory", "multi_tenant"],
-  "stack": ["nextjs", "supabase", "gcp", "typescript"],
-  "timestamp": "2025-12-25"
+  "edit": 2,
+  "feature": "waitlist_form",
+  "counter": 47,
+  "status": "production_ready",
+  "deploy": "static_hosting"
 }
