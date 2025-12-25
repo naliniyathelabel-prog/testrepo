@@ -33,8 +33,9 @@ body {
 /* Header */
 .header {
   padding: 16px 20px;
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--border);
   position: relative;
   z-index: 10;
@@ -164,7 +165,7 @@ body {
 /* Perplexity-style Input Area */
 .input-container {
   position: fixed;
-  bottom: 0;
+  bottom: env(safe-area-inset-bottom, 0px);
   left: 0;
   right: 0;
   background: linear-gradient(to top, #ffffff 80%, rgba(255,255,255,0));
