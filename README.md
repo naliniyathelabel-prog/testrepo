@@ -1,20 +1,30 @@
-# Flonest Chat - Gemini BYOK
+# Flonest Chat - Semantic Memory AI
 
-Mobile-first AI chat interface powered by Google Gemini.
+Mobile-first AI chat with persistent semantic memory powered by Gemini 2.x.
 
 ## Features
-✅ **BYOK (Bring Your Own Key)** - Client-side only  
-✅ **Gemini 2.5 Flash** - Latest model (recommended)  
-✅ **System prompts** - Configure AI behavior  
+✅ **Gemini 2.5 Pro & Flash** - Latest models  
+✅ **Semantic Memory** - Vector embeddings for future search  
+✅ **IndexedDB Persistence** - Survives refresh/close  
+✅ **Offline Storage** - Messages stored locally  
 ✅ **Safety OFF by default** - Unrestricted creative mode  
-✅ **Browser storage** - Persists in localStorage  
-✅ **Mobile-optimized** - Touch-friendly UI  
+✅ **BYOK** - Bring your own API key  
 
 ## Models Supported
-- gemini-2.5-flash (⚡ Recommended)
-- gemini-2.0-flash-exp
-- gemini-1.5-flash
-- gemini-1.5-pro
+- 🧠 **gemini-2.5-pro** - Most intelligent (Mar 2025)
+- ⚡ **gemini-2.5-flash** - Fast & balanced (Recommended)
+- 💭 **gemini-2.0-flash-thinking** - Chain-of-thought reasoning
+- **gemini-2.0-flash-exp** - Experimental features
+
+## Architecture
+```
+User message → IndexedDB → Gemini API → Response
+      ↓                           ↓
+  Embedding                   Embedding
+      ↓                           ↓
+  IndexedDB ← ─ ─ ─ ─ ─ ─ → IndexedDB
+              (Future: Semantic Search)
+```
 
 ## Local Dev
 ```bash
@@ -22,20 +32,21 @@ npm install
 npm run dev
 ```
 
-## Deploy
-```bash
-npm run build
-# Vercel/Netlify auto-deploys from root
-```
+## Storage
+- **Config**: localStorage (~5 KB)
+- **Messages**: IndexedDB (~50 MB+)
+- **Embeddings**: 768-dimensional vectors per message
 
 ## Usage
-1. Tap **+** button
-2. Enter your Gemini API key (https://aistudio.google.com/apikey)
-3. Select model (default: gemini-2.5-flash)
-4. Toggle safety filters (default: OFF)
-5. Chat freely
+1. Tap **+** → Enter API key (https://aistudio.google.com/apikey)
+2. Select model (default: gemini-2.5-flash)
+3. Toggle safety & embeddings
+4. Chat - messages auto-save to IndexedDB
 
-⚠️ Keys stored in browser localStorage (test keys only)
+## Semantic Search (Coming Soon)
+Embeddings are generated and stored for each message. Future update will add:
+- Vector similarity search
+- Contextual retrieval
+- Smart memory recall
 
-## Note on Vertex AI
-For enterprise features (service accounts, data residency, ADC), you'll need a backend proxy to call Vertex AI. This app uses Gemini API (BYOK) for pure client-side usage.
+Built by Perplexity AI agent.

@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import './App.css'
 import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai'
+import { openDB, saveMessage, loadMessages, clearMessages } from './db'
+import { getEmbedding } from './embeddings'
 
 const STORAGE_KEY = 'flonestChat'
 
@@ -11,20 +13,39 @@ function App() {
     systemPrompt: '',
     apiKey: '',
     model: 'gemini-2.5-flash',
-    safetyOff: true // Default: ALL safety filters OFF
+    safetyOff: true,
+    enableEmbeddings: true
   })
   const [showConfig, setShowConfig] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [initializing, setInitializing] = useState(true)
   const messagesEndRef = useRef(null)
 
+  // Load config and messages on mount
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY)
-    if (stored) {
+    const init = async () => {
+      const stored = localStorage.getItem(STORAGE_KEY)
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored)
+          setConfig(prev => ({ ...prev, ...parsed }))
+        } catch {}
+      }
+
+      // Load persisted messages from IndexedDB
       try {
-        const parsed = JSON.parse(stored)
-        setConfig(prev => ({ ...prev, ...parsed }))
-      } catch {}
+        await openDB()
+        const saved = await loadMessages()
+        if (saved.length > 0) {
+          setMessages(saved.map(m => ({ role: m.role, text: m.text, embedding: m.embedding })))
+        }
+      } catch (err) {
+        console.error('Failed to load messages:', err)
+      }
+
+      setInitializing(false)
     }
+    init()
   }, [])
 
   useEffect(() => {
@@ -35,6 +56,13 @@ function App() {
     setConfig(newConfig)
     localStorage.setItem(STORAGE_KEY, JSON.stringify(newConfig))
     setShowConfig(false)
+  }
+
+  const handleClearChat = async () => {
+    if (confirm('Clear all messages? This cannot be undone.')) {
+      await clearMessages()
+      setMessages([])
+    }
   }
 
   const sendMessage = async () => {
@@ -52,36 +80,29 @@ function App() {
     setLoading(true)
 
     try {
+      // Generate embedding for user message (async, non-blocking)
+      let userEmbedding = null
+      if (config.enableEmbeddings) {
+        userEmbedding = await getEmbedding(currentInput, config.apiKey)
+      }
+
+      // Save user message to IndexedDB
+      await saveMessage(userMsg, userEmbedding)
+
       const genAI = new GoogleGenerativeAI(config.apiKey)
 
-      // Configure model with system instruction and safety settings
-      const modelConfig = {
-        model: config.model
-      }
+      const modelConfig = { model: config.model }
 
       if (config.systemPrompt && config.systemPrompt.trim()) {
         modelConfig.systemInstruction = config.systemPrompt.trim()
       }
 
-      // Safety settings: OFF (BLOCK_NONE) for all categories when safetyOff=true
       if (config.safetyOff) {
         modelConfig.safetySettings = [
-          {
-            category: HarmCategory.HARM_CATEGORY_HARASSMENT,
-            threshold: HarmBlockThreshold.BLOCK_NONE,
-          },
-          {
-            category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-            threshold: HarmBlockThreshold.BLOCK_NONE,
-          },
-          {
-            category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
-            threshold: HarmBlockThreshold.BLOCK_NONE,
-          },
-          {
-            category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
-            threshold: HarmBlockThreshold.BLOCK_NONE,
-          }
+          { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+          { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
+          { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
+          { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE }
         ]
       }
 
@@ -96,30 +117,55 @@ function App() {
       const result = await chat.sendMessage(currentInput)
       const response = result.response.text()
 
-      setMessages(prev => [...prev, { role: 'model', text: response }])
+      const modelMsg = { role: 'model', text: response }
+      setMessages(prev => [...prev, modelMsg])
+
+      // Generate embedding for model response
+      let modelEmbedding = null
+      if (config.enableEmbeddings) {
+        modelEmbedding = await getEmbedding(response, config.apiKey)
+      }
+
+      // Save model response to IndexedDB
+      await saveMessage(modelMsg, modelEmbedding)
+
     } catch (err) {
       console.error('Gemini API Error:', err)
-      setMessages(prev => [...prev, { 
+      const errorMsg = { 
         role: 'model', 
         text: '❌ Error: ' + (err.message || 'Failed to get response. Check API key and model.')
-      }])
+      }
+      setMessages(prev => [...prev, errorMsg])
+      await saveMessage(errorMsg, null)
     } finally {
       setLoading(false)
     }
+  }
+
+  if (initializing) {
+    return (
+      <div className="app">
+        <div className="loading-screen">
+          <div className="spinner"></div>
+          <p>Loading...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
     <div className="app">
       <header className="header">
         <h1>💬 Flonest Chat</h1>
-        <span className="subtitle">Powered by Gemini</span>
+        <span className="subtitle">Gemini 2.x • Semantic Memory</span>
+        <button className="clear-btn" onClick={handleClearChat}>🗑️</button>
       </header>
 
       <div className="messages">
         {messages.length === 0 && (
           <div className="empty">
             <p>👋 Start chatting!</p>
-            <p className="hint">Tap + to configure your AI assistant</p>
+            <p className="hint">Tap + to configure • Messages persist locally</p>
           </div>
         )}
         {messages.map((msg, i) => (
@@ -169,9 +215,10 @@ function ConfigModal({ config, onSave, onClose }) {
   const [apiKey, setApiKey] = useState(config.apiKey)
   const [model, setModel] = useState(config.model)
   const [safetyOff, setSafetyOff] = useState(config.safetyOff !== false)
+  const [enableEmbeddings, setEnableEmbeddings] = useState(config.enableEmbeddings !== false)
 
   const handleSave = () => {
-    onSave({ systemPrompt, apiKey, model, safetyOff })
+    onSave({ systemPrompt, apiKey, model, safetyOff, enableEmbeddings })
   }
 
   return (
@@ -191,9 +238,9 @@ function ConfigModal({ config, onSave, onClose }) {
         <label>Gemini Model</label>
         <select value={model} onChange={e => setModel(e.target.value)}>
           <option value="gemini-2.5-flash">⚡ Gemini 2.5 Flash (Recommended)</option>
+          <option value="gemini-2.5-pro">🧠 Gemini 2.5 Pro (Most Intelligent)</option>
+          <option value="gemini-2.0-flash-thinking-exp">💭 Gemini 2.0 Flash Thinking</option>
           <option value="gemini-2.0-flash-exp">Gemini 2.0 Flash (Experimental)</option>
-          <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
-          <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
         </select>
 
         <label>API Key (BYOK)</label>
@@ -215,7 +262,21 @@ function ConfigModal({ config, onSave, onClose }) {
             <span>Turn OFF all safety filters</span>
           </label>
           <p className="hint-text">
-            {safetyOff ? '✅ Unrestricted mode (BLOCK_NONE)' : '⚠️ Default safety settings active'}
+            {safetyOff ? '✅ Unrestricted mode (BLOCK_NONE)' : '⚠️ Default safety active'}
+          </p>
+        </div>
+
+        <div className="safety-toggle">
+          <label className="toggle-label">
+            <input
+              type="checkbox"
+              checked={enableEmbeddings}
+              onChange={e => setEnableEmbeddings(e.target.checked)}
+            />
+            <span>Enable semantic memory (embeddings)</span>
+          </label>
+          <p className="hint-text">
+            {enableEmbeddings ? '🧠 Generates embeddings for future semantic search' : '💬 Basic chat only'}
           </p>
         </div>
 
