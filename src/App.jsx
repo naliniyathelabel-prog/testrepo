@@ -10,8 +10,8 @@ function App() {
   const [config, setConfig] = useState({
     systemPrompt: '',
     apiKey: '',
-    model: 'gemini-2.0-flash-exp',
-    safetyOff: true // Default: safety filters OFF
+    model: 'gemini-2.5-flash',
+    safetyOff: true // Default: ALL safety filters OFF
   })
   const [showConfig, setShowConfig] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -22,7 +22,7 @@ function App() {
     if (stored) {
       try {
         const parsed = JSON.parse(stored)
-        setConfig(parsed)
+        setConfig(prev => ({ ...prev, ...parsed }))
       } catch {}
     }
   }, [])
@@ -63,7 +63,7 @@ function App() {
         modelConfig.systemInstruction = config.systemPrompt.trim()
       }
 
-      // Safety settings: OFF (BLOCK_NONE) for all categories
+      // Safety settings: OFF (BLOCK_NONE) for all categories when safetyOff=true
       if (config.safetyOff) {
         modelConfig.safetySettings = [
           {
@@ -190,7 +190,8 @@ function ConfigModal({ config, onSave, onClose }) {
 
         <label>Gemini Model</label>
         <select value={model} onChange={e => setModel(e.target.value)}>
-          <option value="gemini-2.0-flash-exp">Gemini 2.0 Flash (Fastest)</option>
+          <option value="gemini-2.5-flash">⚡ Gemini 2.5 Flash (Recommended)</option>
+          <option value="gemini-2.0-flash-exp">Gemini 2.0 Flash (Experimental)</option>
           <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
           <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
         </select>
@@ -214,7 +215,7 @@ function ConfigModal({ config, onSave, onClose }) {
             <span>Turn OFF all safety filters</span>
           </label>
           <p className="hint-text">
-            {safetyOff ? '✅ No content filtering (BLOCK_NONE)' : '⚠️ Default safety settings active'}
+            {safetyOff ? '✅ Unrestricted mode (BLOCK_NONE)' : '⚠️ Default safety settings active'}
           </p>
         </div>
 
