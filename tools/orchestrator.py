@@ -32,6 +32,12 @@ TOOLS = {
         "function": "apply_mobile_fixes",
         "summary": "Apply mobile UX fixes (viewport, 100dvh, safe-area, header blur)",
         "file": "tools/mobile_fix.py"
+    },
+    "git-push": {
+        "module": "tools.git_push",
+        "function": "git_push",
+        "summary": "Stage, commit, and push changes to current branch (reads GITHUB_PAT from env)",
+        "file": "tools/git_push.py"
     }
 }
 

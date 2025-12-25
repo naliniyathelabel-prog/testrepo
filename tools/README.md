@@ -34,6 +34,7 @@ python -m tools.orchestrator --use mobile-fix
 |------|---------|
 | `repomap` | Generate/update AIDER_REPOMAP.md with components, functions, hooks, CSS classes |
 | `mobile-fix` | Apply mobile UX fixes (viewport, 100dvh, safe-area, header blur) |
+| `git-push` | Stage, commit, and push changes to current branch (reads GITHUB_PAT from env) |
 
 ---
 
@@ -62,6 +63,30 @@ python -m tools.orchestrator --use mobile-fix
    ```
 
 ---
+
+
+
+---
+
+## Security
+
+### git-push tool
+
+The `git-push` tool supports secure credential handling:
+
+**Option 1: Environment variable (recommended for automation)**
+```bash
+export GITHUB_PAT="your_github_token_here"
+python -m tools.orchestrator --use git-push
+```
+
+**Option 2: Use existing git credentials (interactive/CI)**
+```bash
+# Tool falls back to configured git credentials if GITHUB_PAT not set
+python -m tools.orchestrator --use git-push
+```
+
+**Never hardcode credentials in source files.**
 
 ## Design Principles
 
