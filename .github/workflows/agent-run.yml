@@ -1,0 +1,29 @@
+name: Agent Run (PAT)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  agent:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Verify PAT injected
+        env:
+          GITHUB_PAT: ${{ secrets.AGENT_GITHUB_PAT }}
+        run: |
+          if [ -z "$GITHUB_PAT" ]; then
+            echo "❌ GITHUB_PAT missing"
+            exit 1
+          fi
+          echo "✅ GITHUB_PAT present"
+
+      - name: Run agent
+        env:
+          GITHUB_PAT: ${{ secrets.AGENT_GITHUB_PAT }}
+        run: |
+          echo "Running agent..."
+          # TEMP: proof of access
+          git ls-remote https://x-access-token:${GITHUB_PAT}@github.com/naliniyathelabel-prog/testrepo.git
