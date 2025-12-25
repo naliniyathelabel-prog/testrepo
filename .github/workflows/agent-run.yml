@@ -1,29 +1,75 @@
-name: Agent Run (PAT)
+name: Agent Run (Patch)
 
 on:
   workflow_dispatch:
+    inputs:
+      patch:
+        description: "Unified diff patch from agent"
+        required: true
+        type: string
 
 jobs:
-  agent:
+  apply-agent-patch:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    env:
+      AGENT_GITHUB_PAT: ${{ secrets.AGENT_GITHUB_PAT }}
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
+        with:
+          token: ${{ env.AGENT_GITHUB_PAT }}
+          fetch-depth: 0
 
       - name: Verify PAT injected
-        env:
-          GITHUB_PAT: ${{ secrets.AGENT_GITHUB_PAT }}
         run: |
-          if [ -z "$GITHUB_PAT" ]; then
-            echo "❌ GITHUB_PAT missing"
+          if [ -z "$AGENT_GITHUB_PAT" ]; then
+            echo "❌ AGENT_GITHUB_PAT missing"
             exit 1
           fi
-          echo "✅ GITHUB_PAT present"
+          echo "✅ AGENT_GITHUB_PAT present"
 
-      - name: Run agent
-        env:
-          GITHUB_PAT: ${{ secrets.AGENT_GITHUB_PAT }}
+      - name: Write patch from input
         run: |
-          echo "Running agent..."
-          # TEMP: proof of access
-          git ls-remote https://x-access-token:${GITHUB_PAT}@github.com/naliniyathelabel-prog/testrepo.git
+          cat << 'EOF' > agent.patch
+          ${{ github.event.inputs.patch }}
+          EOF
+          echo "Patch written to agent.patch"
+          wc -l agent.patch || true
+
+      - name: Create agent branch
+        run: |
+          BRANCH="agent/${GITHUB_RUN_ID}"
+          echo "BRANCH_NAME=$BRANCH" >> $GITHUB_ENV
+          git switch -c "$BRANCH"
+          echo "Using branch: $BRANCH"
+
+      - name: Apply patch
+        run: |
+          git apply agent.patch
+          git status
+
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Apply agent patch"
+
+      - name: Push branch
+        run: |
+          git push -u origin "$BRANCH_NAME"
+
+      - name: Open pull request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ env.AGENT_GITHUB_PAT }}
+          branch: ${{ env.BRANCH_NAME }}
+          base: main
+          title: "Agent patch PR"
+          body: |
+            Automated PR created from agent patch input.
