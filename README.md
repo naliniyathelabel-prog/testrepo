@@ -1,40 +1,58 @@
-# Flonest Chat - Gemini 3.0 Semantic Memory
+# Flonest Chat - Smart Context AI
 
-Mobile-first AI chat with persistent semantic memory powered by Gemini 3.0.
+Mobile-first AI chat with **semantic search** that sends only relevant context to Gemini.
+
+## 🚀 Key Innovation: Smart Context
+
+Instead of sending **entire conversation history** every time (expensive, slow, hits limits):
+- ✅ Generates embeddings for each message
+- ✅ Semantic search finds most relevant messages
+- ✅ Sends only top 8 (configurable) messages
+- ✅ **Saves 10-100x tokens on long conversations**
 
 ## ✨ Features
-- 🚀 **Gemini 3.0 Flash & Pro** (December 2025)
-- 🧠 **Semantic Memory** - Vector embeddings (text-embedding-004)
-- 💾 **IndexedDB Persistence** - Survives refresh/close
-- 🔓 **Safety OFF by default** - Unrestricted creative mode
+- 🧠 **Semantic Search** - Vector similarity retrieval
+- 💾 **IndexedDB Storage** - Persistent local memory
+- 🚀 **Gemini 3.0** - Latest models (Dec 2025)
+- 🔓 **Safety OFF** - Unrestricted by default
 - 🔑 **BYOK** - Bring your own API key
-- 📱 **Mobile-optimized** - Touch-friendly UI
+- 📊 **Debug Panel** - See exactly what's sent
 
-## 📊 Models (Verified December 2025)
+## 📐 How It Works
 
-### 🚀 Gemini 3.0 (Latest)
-- **gemini-3-flash-preview** ⚡ - Fastest + most intelligent (Dec 2025)
-- **gemini-3-pro-preview** 🧠 - Most powerful reasoning (Nov 2025)
-
-### Gemini 2.5 (Stable Production)
-- **gemini-2.5-flash** - Best price/performance
-- **gemini-2.5-pro** - Advanced thinking model
-- **gemini-2.5-flash-lite** - Ultra fast, cost-efficient
-
-### Gemini 2.0 (Legacy)
-- **gemini-2.0-flash** - Workhorse model
-- **gemini-2.0-flash-lite** - Fast & light
-
-## 🏗️ Architecture
+### Old Way (Full History)
 ```
-User message → IndexedDB → Gemini API → Response
-      ↓                           ↓
-  Embedding                   Embedding
-  (768-dim)                   (768-dim)
-      ↓                           ↓
-  IndexedDB ← ─ ─ ─ ─ ─ ─ → IndexedDB
-              (Semantic Search Ready)
+100 messages → Send all 100 → API cost: $$$
 ```
+
+### New Way (Semantic Search)
+```
+User: "What did we discuss about Python?"
+  ↓
+Generate query embedding (768-dim vector)
+  ↓
+Search IndexedDB: cosine similarity with all messages
+  ↓
+Retrieve top 8 most relevant messages
+  ↓
+Send ONLY those 8 → API cost: $
+```
+
+## 🎮 Usage
+
+1. **Configure** (tap +):
+   - Add API key
+   - Enable "🧠 Smart context"
+   - Set context window (3-20 messages)
+
+2. **Chat normally**:
+   - App auto-retrieves relevant context
+   - Check console for search logs
+
+3. **Debug** (tap 🔍):
+   - See total messages stored
+   - Check embedding coverage
+   - Verify semantic mode active
 
 ## 💻 Local Dev
 ```bash
@@ -42,22 +60,34 @@ npm install
 npm run dev
 ```
 
-## 📦 Storage
-- **Config**: localStorage (~5 KB)
-- **Messages + Embeddings**: IndexedDB (~1 KB/message)
-- **Offline capable**: Everything stored locally
+## 🔬 Test Semantic Search
 
-## 🎯 Usage
-1. Tap **+** → Enter API key
-2. Select model (default: gemini-3-flash-preview)
-3. Toggle safety & embeddings
-4. Chat - messages auto-save
+**Console logs show:**
+```
+🧠 Semantic Search Results:
+Query: "tell me about Python"
+Total messages: 45
+Relevant context: 8
+  1. [user] Can you explain Python decorators? (similarity: 0.842)
+  2. [model] Python decorators are... (similarity: 0.791)
+  ...
+📤 Sending to Gemini: 8 messages (semantic)
+```
+
+## 📊 Models (December 2025)
+- 🚀 gemini-3-flash-preview (Recommended)
+- 🧠 gemini-3-pro-preview
+- ⚡ gemini-2.5-flash
+- 🔬 gemini-2.5-pro
+
+## 🎯 Benefits
+
+| Scenario | Full History | Semantic Search |
+|----------|--------------|-----------------|
+| 10 messages | 10 sent | 8 sent |
+| 50 messages | 50 sent | 8 sent (6x savings) |
+| 200 messages | 200 sent | 8 sent (25x savings) |
 
 Get API key: https://aistudio.google.com/apikey
 
-## 🔮 Coming Soon
-- Semantic search UI
-- Conversation export
-- Multi-conversation support
-
-Built by Perplexity AI agent • December 2025
+Built by Perplexity AI • December 2025

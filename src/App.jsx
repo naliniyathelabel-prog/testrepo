@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import './App.css'
 import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai'
 import { openDB, saveMessage, loadMessages, clearMessages } from './db'
-import { getEmbedding } from './embeddings'
+import { getEmbedding, cosineSimilarity } from './embeddings'
 
 const STORAGE_KEY = 'flonestChat'
 
@@ -14,14 +14,17 @@ function App() {
     apiKey: '',
     model: 'gemini-3-flash-preview',
     safetyOff: true,
-    enableEmbeddings: true
+    enableEmbeddings: true,
+    semanticMode: true, // Use semantic search instead of full history
+    contextWindow: 8 // Number of relevant messages to retrieve
   })
   const [showConfig, setShowConfig] = useState(false)
+  const [showDebug, setShowDebug] = useState(false)
   const [loading, setLoading] = useState(false)
   const [initializing, setInitializing] = useState(true)
+  const [debugInfo, setDebugInfo] = useState(null)
   const messagesEndRef = useRef(null)
 
-  // Load config and messages on mount
   useEffect(() => {
     const init = async () => {
       const stored = localStorage.getItem(STORAGE_KEY)
@@ -32,12 +35,17 @@ function App() {
         } catch {}
       }
 
-      // Load persisted messages from IndexedDB
       try {
         await openDB()
         const saved = await loadMessages()
         if (saved.length > 0) {
-          setMessages(saved.map(m => ({ role: m.role, text: m.text, embedding: m.embedding })))
+          setMessages(saved.map(m => ({ 
+            role: m.role, 
+            text: m.text, 
+            embedding: m.embedding,
+            timestamp: m.timestamp,
+            id: m.id
+          })))
         }
       } catch (err) {
         console.error('Failed to load messages:', err)
@@ -65,6 +73,49 @@ function App() {
     }
   }
 
+  const handleDebug = async () => {
+    const stored = await loadMessages()
+    const withEmbeddings = stored.filter(m => m.embedding && m.embedding.length > 0)
+
+    setDebugInfo({
+      totalMessages: stored.length,
+      withEmbeddings: withEmbeddings.length,
+      storageSize: new Blob([JSON.stringify(stored)]).size,
+      embeddingDim: withEmbeddings[0]?.embedding?.length || 0,
+      semanticMode: config.semanticMode,
+      contextWindow: config.contextWindow
+    })
+    setShowDebug(true)
+  }
+
+  const getRelevantContext = async (query, queryEmbedding) => {
+    if (!config.semanticMode || !queryEmbedding) {
+      // Fallback: return all messages (old behavior)
+      return messages
+    }
+
+    // Semantic search: find most relevant messages
+    const scored = messages
+      .filter(m => m.embedding && m.embedding.length > 0)
+      .map(m => ({
+        ...m,
+        similarity: cosineSimilarity(queryEmbedding, m.embedding)
+      }))
+      .sort((a, b) => b.similarity - a.similarity)
+      .slice(0, config.contextWindow)
+      .sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0)) // Re-sort by time
+
+    console.log('🧠 Semantic Search Results:')
+    console.log(`Query: "${query}"`)
+    console.log(`Total messages: ${messages.length}`)
+    console.log(`Relevant context: ${scored.length}`)
+    scored.forEach((m, i) => {
+      console.log(`  ${i+1}. [${m.role}] ${m.text.substring(0, 50)}... (similarity: ${m.similarity.toFixed(3)})`)
+    })
+
+    return scored
+  }
+
   const sendMessage = async () => {
     if (!input.trim() || loading) return
 
@@ -73,21 +124,23 @@ function App() {
       return
     }
 
-    const userMsg = { role: 'user', text: input }
+    const userMsg = { role: 'user', text: input, timestamp: Date.now() }
     setMessages(prev => [...prev, userMsg])
     const currentInput = input
     setInput('')
     setLoading(true)
 
     try {
-      // Generate embedding for user message (async, non-blocking)
+      // Generate embedding for user message
       let userEmbedding = null
       if (config.enableEmbeddings) {
         userEmbedding = await getEmbedding(currentInput, config.apiKey)
       }
 
-      // Save user message to IndexedDB
       await saveMessage(userMsg, userEmbedding)
+
+      // Get relevant context using semantic search
+      const relevantMessages = await getRelevantContext(currentInput, userEmbedding)
 
       const genAI = new GoogleGenerativeAI(config.apiKey)
 
@@ -108,16 +161,19 @@ function App() {
 
       const model = genAI.getGenerativeModel(modelConfig)
 
-      const history = messages.map(m => ({
+      // Use relevant context instead of full history
+      const history = relevantMessages.map(m => ({
         role: m.role === 'user' ? 'user' : 'model',
         parts: [{ text: m.text }]
       }))
+
+      console.log(`📤 Sending to Gemini: ${history.length} messages (${config.semanticMode ? 'semantic' : 'full history'})`)
 
       const chat = model.startChat({ history })
       const result = await chat.sendMessage(currentInput)
       const response = result.response.text()
 
-      const modelMsg = { role: 'model', text: response }
+      const modelMsg = { role: 'model', text: response, timestamp: Date.now() }
       setMessages(prev => [...prev, modelMsg])
 
       // Generate embedding for model response
@@ -126,14 +182,14 @@ function App() {
         modelEmbedding = await getEmbedding(response, config.apiKey)
       }
 
-      // Save model response to IndexedDB
       await saveMessage(modelMsg, modelEmbedding)
 
     } catch (err) {
       console.error('Gemini API Error:', err)
       const errorMsg = { 
         role: 'model', 
-        text: '❌ Error: ' + (err.message || 'Failed to get response. Check API key and model.')
+        text: '❌ Error: ' + (err.message || 'Failed to get response. Check API key and model.'),
+        timestamp: Date.now()
       }
       setMessages(prev => [...prev, errorMsg])
       await saveMessage(errorMsg, null)
@@ -157,15 +213,24 @@ function App() {
     <div className="app">
       <header className="header">
         <h1>💬 Flonest Chat</h1>
-        <span className="subtitle">Gemini 3.0 • Semantic Memory</span>
-        <button className="clear-btn" onClick={handleClearChat} title="Clear all messages">🗑️</button>
+        <span className="subtitle">
+          {config.semanticMode ? '🧠 Smart Context' : '📜 Full History'} • Gemini 3.0
+        </span>
+        <div className="header-actions">
+          <button className="icon-btn" onClick={handleDebug} title="Debug info">🔍</button>
+          <button className="icon-btn" onClick={handleClearChat} title="Clear all">🗑️</button>
+        </div>
       </header>
 
       <div className="messages">
         {messages.length === 0 && (
           <div className="empty">
             <p>👋 Start chatting!</p>
-            <p className="hint">Tap + to configure • Messages persist locally</p>
+            <p className="hint">
+              {config.semanticMode 
+                ? '🧠 Semantic search enabled - only relevant context sent'
+                : '📜 Full history mode - all messages sent'}
+            </p>
           </div>
         )}
         {messages.map((msg, i) => (
@@ -206,6 +271,13 @@ function App() {
           onClose={() => setShowConfig(false)} 
         />
       )}
+
+      {showDebug && debugInfo && (
+        <DebugModal 
+          info={debugInfo}
+          onClose={() => setShowDebug(false)}
+        />
+      )}
     </div>
   )
 }
@@ -216,9 +288,11 @@ function ConfigModal({ config, onSave, onClose }) {
   const [model, setModel] = useState(config.model)
   const [safetyOff, setSafetyOff] = useState(config.safetyOff !== false)
   const [enableEmbeddings, setEnableEmbeddings] = useState(config.enableEmbeddings !== false)
+  const [semanticMode, setSemanticMode] = useState(config.semanticMode !== false)
+  const [contextWindow, setContextWindow] = useState(config.contextWindow || 8)
 
   const handleSave = () => {
-    onSave({ systemPrompt, apiKey, model, safetyOff, enableEmbeddings })
+    onSave({ systemPrompt, apiKey, model, safetyOff, enableEmbeddings, semanticMode, contextWindow })
   }
 
   return (
@@ -237,21 +311,15 @@ function ConfigModal({ config, onSave, onClose }) {
 
         <label>Gemini Model</label>
         <select value={model} onChange={e => setModel(e.target.value)}>
-          <optgroup label="🚀 Gemini 3.0 (Latest - Dec 2025)">
-            <option value="gemini-3-flash-preview">⚡ Gemini 3 Flash (Recommended)</option>
-            <option value="gemini-3-pro-preview">🧠 Gemini 3 Pro (Most Intelligent)</option>
+          <optgroup label="🚀 Gemini 3.0 (Latest)">
+            <option value="gemini-3-flash-preview">⚡ Gemini 3 Flash</option>
+            <option value="gemini-3-pro-preview">🧠 Gemini 3 Pro</option>
           </optgroup>
-          <optgroup label="Gemini 2.5 (Stable)">
+          <optgroup label="Gemini 2.5">
             <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
             <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
-            <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash-Lite (Fastest)</option>
-          </optgroup>
-          <optgroup label="Gemini 2.0 (Legacy)">
-            <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
-            <option value="gemini-2.0-flash-lite">Gemini 2.0 Flash-Lite</option>
           </optgroup>
         </select>
-        <p className="hint-text">December 2025 models verified ✓</p>
 
         <label>API Key</label>
         <input
@@ -273,9 +341,6 @@ function ConfigModal({ config, onSave, onClose }) {
             />
             <span>Turn OFF all safety filters</span>
           </label>
-          <p className="hint-text">
-            {safetyOff ? '✅ Unrestricted (BLOCK_NONE)' : '⚠️ Default safety active'}
-          </p>
         </div>
 
         <div className="toggle-section">
@@ -287,15 +352,101 @@ function ConfigModal({ config, onSave, onClose }) {
             />
             <span>Enable semantic memory</span>
           </label>
+        </div>
+
+        <div className="toggle-section">
+          <label className="toggle-label">
+            <input
+              type="checkbox"
+              checked={semanticMode}
+              onChange={e => setSemanticMode(e.target.checked)}
+            />
+            <span>🧠 Smart context (semantic search)</span>
+          </label>
           <p className="hint-text">
-            {enableEmbeddings ? '🧠 Embeddings enabled' : '💬 Basic chat only'}
+            {semanticMode 
+              ? '✅ Sends only relevant messages (saves tokens)' 
+              : '📜 Sends full history every time'}
           </p>
         </div>
+
+        {semanticMode && (
+          <div>
+            <label>Context window (messages to retrieve)</label>
+            <input
+              type="range"
+              min="3"
+              max="20"
+              value={contextWindow}
+              onChange={e => setContextWindow(parseInt(e.target.value))}
+            />
+            <p className="hint-text">Current: {contextWindow} most relevant messages</p>
+          </div>
+        )}
 
         <div className="modal-actions">
           <button onClick={onClose} className="btn-secondary">Cancel</button>
           <button onClick={handleSave} className="btn-primary">Save</button>
         </div>
+      </div>
+    </div>
+  )
+}
+
+function DebugModal({ info, onClose }) {
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal debug-modal" onClick={e => e.stopPropagation()}>
+        <h2>🔍 Debug Info</h2>
+
+        <div className="debug-grid">
+          <div className="debug-item">
+            <span className="debug-label">Total Messages</span>
+            <span className="debug-value">{info.totalMessages}</span>
+          </div>
+
+          <div className="debug-item">
+            <span className="debug-label">With Embeddings</span>
+            <span className="debug-value">{info.withEmbeddings}</span>
+          </div>
+
+          <div className="debug-item">
+            <span className="debug-label">Storage Size</span>
+            <span className="debug-value">{(info.storageSize / 1024).toFixed(1)} KB</span>
+          </div>
+
+          <div className="debug-item">
+            <span className="debug-label">Embedding Dimension</span>
+            <span className="debug-value">{info.embeddingDim}</span>
+          </div>
+
+          <div className="debug-item">
+            <span className="debug-label">Mode</span>
+            <span className="debug-value">
+              {info.semanticMode ? '🧠 Semantic' : '📜 Full History'}
+            </span>
+          </div>
+
+          <div className="debug-item">
+            <span className="debug-label">Context Window</span>
+            <span className="debug-value">{info.contextWindow} msgs</span>
+          </div>
+        </div>
+
+        <div className="debug-explanation">
+          <h3>💡 How it works</h3>
+          <p>
+            {info.semanticMode 
+              ? `When you send a message, the app retrieves the ${info.contextWindow} most semantically similar messages from your history (using vector embeddings) and sends ONLY those to Gemini. This saves tokens and stays within context limits.`
+              : 'Currently sending full conversation history to Gemini. Enable semantic mode to save tokens and improve performance.'}
+          </p>
+
+          <p><strong>Check browser console for detailed logs.</strong></p>
+        </div>
+
+        <button onClick={onClose} className="btn-primary" style={{width: '100%', marginTop: '16px'}}>
+          Close
+        </button>
       </div>
     </div>
   )
