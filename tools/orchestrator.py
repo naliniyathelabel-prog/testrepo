@@ -1,63 +1,122 @@
 """Orchestrator for Flonest tooling.
 
-This module provides a single entrypoint which can call multiple
-repo tools (repomap generation, mobile fixes, semantic audits, etc.).
-It is designed to be simple to call from CI, shell scripts, or LLM agents.
+STRICT RULE: All tools MUST be invoked via this orchestrator.
+Direct execution of tools/*.py is prohibited.
+
+Usage:
+    python -m tools.orchestrator                    # List available tools
+    python -m tools.orchestrator --read <tool>      # Read tool source and capabilities
+    python -m tools.orchestrator --use <tool>       # Execute a tool
+
+Design:
+- Single control plane for all repo operations
+- LLM-friendly discovery via --read
+- Safe execution via --use
+- New tools registered here with name + summary
 """
 
 import argparse
+import sys
 from pathlib import Path
 
-from tools import repomap, mobile_fix
+# Tool registry - add new tools here
+TOOLS = {
+    "repomap": {
+        "module": "tools.repomap",
+        "function": "generate_repomap",
+        "summary": "Generate/update AIDER_REPOMAP.md with components, functions, hooks, CSS classes",
+        "file": "tools/repomap.py"
+    },
+    "mobile-fix": {
+        "module": "tools.mobile_fix",
+        "function": "apply_mobile_fixes",
+        "summary": "Apply mobile UX fixes (viewport, 100dvh, safe-area, header blur)",
+        "file": "tools/mobile_fix.py"
+    }
+}
 
 
 def list_tools() -> None:
-    """Print available tools and their summaries.
-
-    Default behavior when no explicit tool is passed.
-    Safe to call from an LLM to discover capabilities.
-    """
-
-    tools = {
-        "repomap": "Generate/update AIDER_REPOMAP.md with components, functions, hooks, CSS classes.",
-        "mobile-fix": "Apply mobile UX fixes (viewport, 100dvh, safe-area, header blur).",
-    }
-    print("Available tools:
-")
-    for name, desc in tools.items():
-        print(f"- {name}: {desc}")
+    """Print available tools and their summaries."""
+    print("\n📦 Available tools:\n")
+    for name, info in TOOLS.items():
+        print(f"  {name:15} {info['summary']}")
+    print("\n💡 Usage:")
+    print("  python -m tools.orchestrator --read <tool>")
+    print("  python -m tools.orchestrator --use <tool>\n")
 
 
-def run_repomap(root: Path) -> None:
-    """Generate/update AIDER-style repomap files under the repo."""
+def read_tool(tool_name: str) -> None:
+    """Read and display tool source code and metadata."""
+    if tool_name not in TOOLS:
+        print(f"❌ Unknown tool: {tool_name}")
+        list_tools()
+        sys.exit(1)
 
-    repomap.generate_repomap(root)
+    tool = TOOLS[tool_name]
+    print(f"\n🔍 Tool: {tool_name}")
+    print(f"Summary: {tool['summary']}")
+    print(f"Module: {tool['module']}")
+    print(f"Function: {tool['function']}()")
+    print(f"\n📄 Source ({tool['file']}):\n")
+
+    tool_path = Path(tool['file'])
+    if tool_path.exists():
+        print(tool_path.read_text(encoding='utf-8'))
+    else:
+        print(f"⚠️  File not found: {tool_path}")
 
 
-def run_mobile_fix(root: Path) -> None:
-    """Apply surgical mobile UX fixes (keyboard + header)."""
+def use_tool(tool_name: str, root: Path) -> None:
+    """Execute a registered tool."""
+    if tool_name not in TOOLS:
+        print(f"❌ Unknown tool: {tool_name}")
+        list_tools()
+        sys.exit(1)
 
-    mobile_fix.apply_mobile_fixes(root)
+    tool = TOOLS[tool_name]
+    print(f"\n▶️  Executing: {tool_name}")
+    print(f"   {tool['summary']}\n")
+
+    try:
+        # Dynamic import
+        parts = tool['module'].split('.')
+        module = __import__(tool['module'], fromlist=[parts[-1]])
+        func = getattr(module, tool['function'])
+
+        # Execute
+        func(root)
+        print(f"\n✅ {tool_name} completed successfully\n")
+
+    except Exception as e:
+        print(f"\n❌ Error executing {tool_name}: {e}\n")
+        sys.exit(1)
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Flonest tools orchestrator", add_help=True)
-    parser.add_argument("tool", nargs="?", help="Which tool to run (default: list tools)")
-    parser.add_argument("--root", default=".", help="Repo root path (default: current directory)")
-    args = parser.parse_args()
+    parser = argparse.ArgumentParser(
+        description="Flonest tools orchestrator - strict single entry point",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  python -m tools.orchestrator              # List tools
+  python -m tools.orchestrator --read repomap
+  python -m tools.orchestrator --use mobile-fix
+        """
+    )
 
+    parser.add_argument('--read', metavar='TOOL', help='Read tool source and capabilities')
+    parser.add_argument('--use', metavar='TOOL', help='Execute a tool')
+    parser.add_argument('--root', default='.', help='Repo root path (default: current dir)')
+
+    args = parser.parse_args()
     root = Path(args.root).resolve()
 
-    if not args.tool:
-        list_tools()
-        return
-
-    if args.tool == "repomap":
-        run_repomap(root)
-    elif args.tool == "mobile-fix":
-        run_mobile_fix(root)
+    if args.read:
+        read_tool(args.read)
+    elif args.use:
+        use_tool(args.use, root)
     else:
-        print(f"Unknown tool: {args.tool}")
         list_tools()
 
 
