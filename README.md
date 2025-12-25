@@ -1,4 +1,4 @@
-# Flonest Projects
+# Flonest Projects 
 
 ## Chat App (Gemini BYOK)
 Mobile-first AI chat interface → [chat-app/](./chat-app/)
