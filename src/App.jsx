@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import './App.css'
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai'
 
 const STORAGE_KEY = 'flonestChat'
 
@@ -10,7 +10,8 @@ function App() {
   const [config, setConfig] = useState({
     systemPrompt: '',
     apiKey: '',
-    model: 'gemini-2.0-flash-exp'
+    model: 'gemini-2.0-flash-exp',
+    safetyOff: true // Default: safety filters OFF
   })
   const [showConfig, setShowConfig] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -53,14 +54,35 @@ function App() {
     try {
       const genAI = new GoogleGenerativeAI(config.apiKey)
 
-      // System instruction must be passed to getGenerativeModel
+      // Configure model with system instruction and safety settings
       const modelConfig = {
         model: config.model
       }
 
-      // Only add systemInstruction if it exists and is not empty
       if (config.systemPrompt && config.systemPrompt.trim()) {
         modelConfig.systemInstruction = config.systemPrompt.trim()
+      }
+
+      // Safety settings: OFF (BLOCK_NONE) for all categories
+      if (config.safetyOff) {
+        modelConfig.safetySettings = [
+          {
+            category: HarmCategory.HARM_CATEGORY_HARASSMENT,
+            threshold: HarmBlockThreshold.BLOCK_NONE,
+          },
+          {
+            category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+            threshold: HarmBlockThreshold.BLOCK_NONE,
+          },
+          {
+            category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+            threshold: HarmBlockThreshold.BLOCK_NONE,
+          },
+          {
+            category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+            threshold: HarmBlockThreshold.BLOCK_NONE,
+          }
+        ]
       }
 
       const model = genAI.getGenerativeModel(modelConfig)
@@ -146,9 +168,10 @@ function ConfigModal({ config, onSave, onClose }) {
   const [systemPrompt, setSystemPrompt] = useState(config.systemPrompt)
   const [apiKey, setApiKey] = useState(config.apiKey)
   const [model, setModel] = useState(config.model)
+  const [safetyOff, setSafetyOff] = useState(config.safetyOff !== false)
 
   const handleSave = () => {
-    onSave({ systemPrompt, apiKey, model })
+    onSave({ systemPrompt, apiKey, model, safetyOff })
   }
 
   return (
@@ -180,6 +203,20 @@ function ConfigModal({ config, onSave, onClose }) {
           placeholder="AIza..."
         />
         <p className="warning">⚠️ Stored in browser localStorage (test keys only)</p>
+
+        <div className="safety-toggle">
+          <label className="toggle-label">
+            <input
+              type="checkbox"
+              checked={safetyOff}
+              onChange={e => setSafetyOff(e.target.checked)}
+            />
+            <span>Turn OFF all safety filters</span>
+          </label>
+          <p className="hint-text">
+            {safetyOff ? '✅ No content filtering (BLOCK_NONE)' : '⚠️ Default safety settings active'}
+          </p>
+        </div>
 
         <div className="modal-actions">
           <button onClick={onClose} className="btn-secondary">Cancel</button>
