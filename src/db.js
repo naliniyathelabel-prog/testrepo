@@ -1,4 +1,4 @@
-// IndexedDB utilities for message persistence with embeddings
+// IndexedDB utilities for production-safe RAG
 const DB_NAME = 'FlonestChat';
 const DB_VERSION = 1;
 const STORE_NAME = 'messages';
@@ -33,9 +33,9 @@ export const saveMessage = async (message, embedding, conversationId = 'default'
     const record = {
       role: message.role,
       text: message.text,
-      embedding: embedding || null,
+      embedding: embedding || null, // Null if selective embedding skipped it
       conversationId,
-      timestamp: Date.now()
+      timestamp: message.timestamp || Date.now()
     };
 
     const request = store.add(record);
@@ -44,6 +44,7 @@ export const saveMessage = async (message, embedding, conversationId = 'default'
   });
 };
 
+// LOAD ALL (Legacy / Initial load)
 export const loadMessages = async (conversationId = 'default') => {
   const db = await openDB();
   return new Promise((resolve, reject) => {
@@ -53,6 +54,30 @@ export const loadMessages = async (conversationId = 'default') => {
 
     const request = index.getAll(conversationId);
     request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+};
+
+// LOAD RECENT WITH EMBEDDINGS (Bounded Retrieval)
+export const loadRecentEmbeddedMessages = async (limit = 200, conversationId = 'default') => {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readonly');
+    const store = tx.objectStore(STORE_NAME);
+    const index = store.index('conversationId');
+
+    // In a real app, we'd use a cursor to get recent only.
+    // For now, get all and slice the last N, filtering for those with embeddings.
+    const request = index.getAll(conversationId);
+
+    request.onsuccess = () => {
+      const all = request.result;
+      // Filter: must have embedding
+      const embedded = all.filter(m => m.embedding && m.embedding.length > 0);
+      // Slice: last N
+      const recent = embedded.slice(-limit);
+      resolve(recent);
+    };
     request.onerror = () => reject(request.error);
   });
 };
