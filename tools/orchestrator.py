@@ -11,41 +11,54 @@ from pathlib import Path
 from tools import repomap, mobile_fix
 
 
-def run_repomap(root: Path) -> None:
-    """Generate/update AIDER-style repomap files under the repo.
+def list_tools() -> None:
+    """Print available tools and their summaries.
 
-    - Scans src/ for JS/JSX modules
-    - Extracts components, functions, hooks
-    - Writes AIDER_REPOMAP.md
+    Default behavior when no explicit tool is passed.
+    Safe to call from an LLM to discover capabilities.
     """
+
+    tools = {
+        "repomap": "Generate/update AIDER_REPOMAP.md with components, functions, hooks, CSS classes.",
+        "mobile-fix": "Apply mobile UX fixes (viewport, 100dvh, safe-area, header blur).",
+    }
+    print("Available tools:
+")
+    for name, desc in tools.items():
+        print(f"- {name}: {desc}")
+
+
+def run_repomap(root: Path) -> None:
+    """Generate/update AIDER-style repomap files under the repo."""
 
     repomap.generate_repomap(root)
 
 
 def run_mobile_fix(root: Path) -> None:
-    """Apply surgical mobile UX fixes.
-
-    - Ensures viewport meta has interactive-widget=resizes-content
-    - Uses 100dvh instead of 100vh for the main app container
-    - Applies safe-area-inset-bottom to the chat input container
-    - Makes header semi-transparent with blur
-    """
+    """Apply surgical mobile UX fixes (keyboard + header)."""
 
     mobile_fix.apply_mobile_fixes(root)
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Flonest tools orchestrator")
-    parser.add_argument("tool", choices=["repomap", "mobile-fix"], help="Which tool to run")
+    parser = argparse.ArgumentParser(description="Flonest tools orchestrator", add_help=True)
+    parser.add_argument("tool", nargs="?", help="Which tool to run (default: list tools)")
     parser.add_argument("--root", default=".", help="Repo root path (default: current directory)")
     args = parser.parse_args()
 
     root = Path(args.root).resolve()
 
+    if not args.tool:
+        list_tools()
+        return
+
     if args.tool == "repomap":
         run_repomap(root)
     elif args.tool == "mobile-fix":
         run_mobile_fix(root)
+    else:
+        print(f"Unknown tool: {args.tool}")
+        list_tools()
 
 
 if __name__ == "__main__":
