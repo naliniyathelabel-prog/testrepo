@@ -1,18 +1,9 @@
-# Flonest ERP ✅ LIVE DEMO
+# Flonest Projects
 
-## Agent Edit #2: Waitlist Form + Counter
+## Chat App (Gemini BYOK)
+Mobile-first AI chat interface → [chat-app/](./chat-app/)
 
-**Live Features:**
-- ✨ Real-time waitlist counter (localStorage)
-- ✨ Mobile-first responsive form  
-- ✨ WhatsApp-ready signup flow
-- ✨ Gradient UI (production polish)
+## Waitlist Landing
+→ [index.html](./index.html)
 
-**Merge → Deploy:** Vercel/Netlify/GitHub Pages
-
-```
-npm i -g serve
-serve . 
-```
-
-**Agent Flow:** Idea → Edit → Push → Live in 60s
+Built by Perplexity AI agent.
