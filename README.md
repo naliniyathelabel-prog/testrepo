@@ -1,52 +1,63 @@
-# Flonest Chat - Semantic Memory AI
+# Flonest Chat - Gemini 3.0 Semantic Memory
 
-Mobile-first AI chat with persistent semantic memory powered by Gemini 2.x.
+Mobile-first AI chat with persistent semantic memory powered by Gemini 3.0.
 
-## Features
-✅ **Gemini 2.5 Pro & Flash** - Latest models  
-✅ **Semantic Memory** - Vector embeddings for future search  
-✅ **IndexedDB Persistence** - Survives refresh/close  
-✅ **Offline Storage** - Messages stored locally  
-✅ **Safety OFF by default** - Unrestricted creative mode  
-✅ **BYOK** - Bring your own API key  
+## ✨ Features
+- 🚀 **Gemini 3.0 Flash & Pro** (December 2025)
+- 🧠 **Semantic Memory** - Vector embeddings (text-embedding-004)
+- 💾 **IndexedDB Persistence** - Survives refresh/close
+- 🔓 **Safety OFF by default** - Unrestricted creative mode
+- 🔑 **BYOK** - Bring your own API key
+- 📱 **Mobile-optimized** - Touch-friendly UI
 
-## Models Supported
-- 🧠 **gemini-2.5-pro** - Most intelligent (Mar 2025)
-- ⚡ **gemini-2.5-flash** - Fast & balanced (Recommended)
-- 💭 **gemini-2.0-flash-thinking** - Chain-of-thought reasoning
-- **gemini-2.0-flash-exp** - Experimental features
+## 📊 Models (Verified December 2025)
 
-## Architecture
+### 🚀 Gemini 3.0 (Latest)
+- **gemini-3-flash-preview** ⚡ - Fastest + most intelligent (Dec 2025)
+- **gemini-3-pro-preview** 🧠 - Most powerful reasoning (Nov 2025)
+
+### Gemini 2.5 (Stable Production)
+- **gemini-2.5-flash** - Best price/performance
+- **gemini-2.5-pro** - Advanced thinking model
+- **gemini-2.5-flash-lite** - Ultra fast, cost-efficient
+
+### Gemini 2.0 (Legacy)
+- **gemini-2.0-flash** - Workhorse model
+- **gemini-2.0-flash-lite** - Fast & light
+
+## 🏗️ Architecture
 ```
 User message → IndexedDB → Gemini API → Response
       ↓                           ↓
   Embedding                   Embedding
+  (768-dim)                   (768-dim)
       ↓                           ↓
   IndexedDB ← ─ ─ ─ ─ ─ ─ → IndexedDB
-              (Future: Semantic Search)
+              (Semantic Search Ready)
 ```
 
-## Local Dev
+## 💻 Local Dev
 ```bash
 npm install
 npm run dev
 ```
 
-## Storage
+## 📦 Storage
 - **Config**: localStorage (~5 KB)
-- **Messages**: IndexedDB (~50 MB+)
-- **Embeddings**: 768-dimensional vectors per message
+- **Messages + Embeddings**: IndexedDB (~1 KB/message)
+- **Offline capable**: Everything stored locally
 
-## Usage
-1. Tap **+** → Enter API key (https://aistudio.google.com/apikey)
-2. Select model (default: gemini-2.5-flash)
+## 🎯 Usage
+1. Tap **+** → Enter API key
+2. Select model (default: gemini-3-flash-preview)
 3. Toggle safety & embeddings
-4. Chat - messages auto-save to IndexedDB
+4. Chat - messages auto-save
 
-## Semantic Search (Coming Soon)
-Embeddings are generated and stored for each message. Future update will add:
-- Vector similarity search
-- Contextual retrieval
-- Smart memory recall
+Get API key: https://aistudio.google.com/apikey
 
-Built by Perplexity AI agent.
+## 🔮 Coming Soon
+- Semantic search UI
+- Conversation export
+- Multi-conversation support
+
+Built by Perplexity AI agent • December 2025

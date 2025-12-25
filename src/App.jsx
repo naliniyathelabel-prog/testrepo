@@ -12,7 +12,7 @@ function App() {
   const [config, setConfig] = useState({
     systemPrompt: '',
     apiKey: '',
-    model: 'gemini-2.5-flash',
+    model: 'gemini-3-flash-preview',
     safetyOff: true,
     enableEmbeddings: true
   })
@@ -157,8 +157,8 @@ function App() {
     <div className="app">
       <header className="header">
         <h1>💬 Flonest Chat</h1>
-        <span className="subtitle">Gemini 2.x • Semantic Memory</span>
-        <button className="clear-btn" onClick={handleClearChat}>🗑️</button>
+        <span className="subtitle">Gemini 3.0 • Semantic Memory</span>
+        <button className="clear-btn" onClick={handleClearChat} title="Clear all messages">🗑️</button>
       </header>
 
       <div className="messages">
@@ -226,33 +226,45 @@ function ConfigModal({ config, onSave, onClose }) {
       <div className="modal" onClick={e => e.stopPropagation()}>
         <h2>⚙️ Configuration</h2>
 
-        <label>System Prompt (AI behavior)</label>
+        <label>System Prompt</label>
         <textarea
           value={systemPrompt}
           onChange={e => setSystemPrompt(e.target.value)}
-          placeholder="You are a helpful assistant that provides clear and concise answers."
-          rows={4}
+          placeholder="e.g., Act as assistant"
+          rows={3}
         />
-        <p className="hint-text">Leave empty for default behavior</p>
+        <p className="hint-text">Optional - Define AI behavior</p>
 
         <label>Gemini Model</label>
         <select value={model} onChange={e => setModel(e.target.value)}>
-          <option value="gemini-2.5-flash">⚡ Gemini 2.5 Flash (Recommended)</option>
-          <option value="gemini-2.5-pro">🧠 Gemini 2.5 Pro (Most Intelligent)</option>
-          <option value="gemini-2.0-flash-thinking-exp">💭 Gemini 2.0 Flash Thinking</option>
-          <option value="gemini-2.0-flash-exp">Gemini 2.0 Flash (Experimental)</option>
+          <optgroup label="🚀 Gemini 3.0 (Latest - Dec 2025)">
+            <option value="gemini-3-flash-preview">⚡ Gemini 3 Flash (Recommended)</option>
+            <option value="gemini-3-pro-preview">🧠 Gemini 3 Pro (Most Intelligent)</option>
+          </optgroup>
+          <optgroup label="Gemini 2.5 (Stable)">
+            <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+            <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
+            <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash-Lite (Fastest)</option>
+          </optgroup>
+          <optgroup label="Gemini 2.0 (Legacy)">
+            <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+            <option value="gemini-2.0-flash-lite">Gemini 2.0 Flash-Lite</option>
+          </optgroup>
         </select>
+        <p className="hint-text">December 2025 models verified ✓</p>
 
-        <label>API Key (BYOK)</label>
+        <label>API Key</label>
         <input
           type="password"
           value={apiKey}
           onChange={e => setApiKey(e.target.value)}
           placeholder="AIza..."
         />
-        <p className="warning">⚠️ Stored in browser localStorage (test keys only)</p>
+        <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" className="api-link">
+          Get API key →
+        </a>
 
-        <div className="safety-toggle">
+        <div className="toggle-section">
           <label className="toggle-label">
             <input
               type="checkbox"
@@ -262,21 +274,21 @@ function ConfigModal({ config, onSave, onClose }) {
             <span>Turn OFF all safety filters</span>
           </label>
           <p className="hint-text">
-            {safetyOff ? '✅ Unrestricted mode (BLOCK_NONE)' : '⚠️ Default safety active'}
+            {safetyOff ? '✅ Unrestricted (BLOCK_NONE)' : '⚠️ Default safety active'}
           </p>
         </div>
 
-        <div className="safety-toggle">
+        <div className="toggle-section">
           <label className="toggle-label">
             <input
               type="checkbox"
               checked={enableEmbeddings}
               onChange={e => setEnableEmbeddings(e.target.checked)}
             />
-            <span>Enable semantic memory (embeddings)</span>
+            <span>Enable semantic memory</span>
           </label>
           <p className="hint-text">
-            {enableEmbeddings ? '🧠 Generates embeddings for future semantic search' : '💬 Basic chat only'}
+            {enableEmbeddings ? '🧠 Embeddings enabled' : '💬 Basic chat only'}
           </p>
         </div>
 
