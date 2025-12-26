@@ -113,9 +113,9 @@ function App() {
   }
 
   const handleResearch = async () => {
-    if (!input.trim() || researching) return
+    if (!input.trim() || researching || loading) return
 
-    const query = input
+    const query = input.trim()
     setInput('')
     if (textareaRef.current) textareaRef.current.style.height = 'auto'
 
@@ -126,6 +126,8 @@ function App() {
     setMessages(prev => [...prev, userMsg])
 
     try {
+      console.log('Starting research for:', query)
+
       // Perform web research
       const research = await researchTopic(query, {
         resultCount: 5,
@@ -133,9 +135,13 @@ function App() {
         maxContentLength: 2000
       })
 
+      console.log('Research completed:', research)
       setResearchData(research)
 
-      if (research.success) {
+      if (research.success && research.sources.length > 0) {
+        // Save user message
+        await saveMessage(userMsg, null)
+
         // Format and display results
         const formattedResults = formatResearchResults(research)
 
@@ -147,57 +153,77 @@ function App() {
         }
 
         setMessages(prev => [...prev, researchMsg])
-
-        // Save to DB
-        await saveMessage(userMsg, null)
         await saveMessage(researchMsg, null)
 
-        // Now analyze with Gemini if API key is set
+        // Analyze with Gemini if API key is set
         if (config.apiKey) {
+          setResearching(false)
           setLoading(true)
 
-          const context = extractResearchContext(research)
-          const analysisPrompt = `Based on this web research about "${query}", provide a comprehensive analysis:\n\n${context}\n\nAnalysis:`
+          try {
+            const context = extractResearchContext(research)
+            const analysisPrompt = `Based on this web research about "${query}", provide a comprehensive analysis and summary:\n\n${context}\n\nProvide a clear, concise analysis:`
 
-          const genAI = new GoogleGenerativeAI(config.apiKey)
-          const model = genAI.getGenerativeModel({ 
-            model: config.model,
-            safetySettings: config.safetyOff ? [
-              { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
-              { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
-              { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
-              { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE }
-            ] : undefined
-          })
+            const genAI = new GoogleGenerativeAI(config.apiKey)
+            const model = genAI.getGenerativeModel({ 
+              model: config.model,
+              safetySettings: config.safetyOff ? [
+                { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+                { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
+                { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
+                { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE }
+              ] : undefined
+            })
 
-          const result = await model.generateContent(analysisPrompt)
-          const analysis = result.response.text()
+            const result = await model.generateContent(analysisPrompt)
+            const analysis = result.response.text()
 
-          const analysisMsg = { 
-            role: 'model', 
-            text: `📊 **Deep Analysis:**\n\n${analysis}`,
-            timestamp: Date.now()
+            const analysisMsg = { 
+              role: 'model', 
+              text: `📊 **AI Analysis:**\n\n${analysis}`,
+              timestamp: Date.now()
+            }
+
+            setMessages(prev => [...prev, analysisMsg])
+            await saveMessage(analysisMsg, null)
+          } catch (aiError) {
+            console.error('AI analysis error:', aiError)
+            const errorMsg = { 
+              role: 'model', 
+              text: '⚠️ Research completed but AI analysis failed. You can still see the sources above.',
+              timestamp: Date.now()
+            }
+            setMessages(prev => [...prev, errorMsg])
+            await saveMessage(errorMsg, null)
+          } finally {
+            setLoading(false)
           }
-
-          setMessages(prev => [...prev, analysisMsg])
-          await saveMessage(analysisMsg, null)
-
-          setLoading(false)
         }
       } else {
-        throw new Error('Research failed')
+        // Research failed or no results
+        const errorText = research.error || 'No results found. Try a different query.'
+        const errorMsg = { 
+          role: 'model', 
+          text: `❌ ${errorText}`,
+          timestamp: Date.now()
+        }
+        setMessages(prev => [...prev, errorMsg])
+        await saveMessage(userMsg, null)
+        await saveMessage(errorMsg, null)
       }
     } catch (err) {
       console.error('Research error:', err)
       const errorMsg = { 
         role: 'model', 
-        text: '❌ Research failed. Please try again.',
+        text: `❌ Research failed: ${err.message || 'Unknown error'}\n\nPlease check your internet connection and try again.`,
         timestamp: Date.now()
       }
       setMessages(prev => [...prev, errorMsg])
+      await saveMessage(userMsg, null)
       await saveMessage(errorMsg, null)
     } finally {
       setResearching(false)
+      setLoading(false)
     }
   }
 
