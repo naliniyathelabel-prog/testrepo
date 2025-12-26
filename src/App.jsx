@@ -71,6 +71,16 @@ function App() {
     }
   }, [input])
 
+  // Prevent body scroll when modal is open
+  useEffect(() => {
+    if (showConfig || showDebug) {
+      document.body.classList.add('modal-open')
+    } else {
+      document.body.classList.remove('modal-open')
+    }
+    return () => document.body.classList.remove('modal-open')
+  }, [showConfig, showDebug])
+
   const saveConfig = (newConfig) => {
     setConfig(newConfig)
     localStorage.setItem(STORAGE_KEY, JSON.stringify(newConfig))
@@ -238,7 +248,7 @@ function App() {
           <textarea
             ref={textareaRef}
             className="input-textarea"
-            placeholder="Ask follow-up..."
+            placeholder="Ask anything..."
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => {
