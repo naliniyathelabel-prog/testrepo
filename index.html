@@ -4,66 +4,66 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🏰 INIYA EMPIRE DASHBOARD</title>
+    <title>🏰 INIYA EMPIRE DASHBOARD v3.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { background: #0a0a0a; color: #00ffcc; font-family: 'Courier New', Courier, monospace; }
-        .neon-border { border: 1px solid #00ffcc; box-shadow: 0 0 10px #00ffcc; }
-        .glitch { text-shadow: 2px 2px #ff00ff; }
-        .vault-card { background: #111; border: 1px solid #333; }
+        body { background: #050505; color: #00ffcc; font-family: 'Courier New', Courier, monospace; }
+        .neon-border { border: 2px solid #00ffcc; box-shadow: 0 0 20px #00ffcc; }
+        .glitch { text-shadow: 2px 2px #ff00ff, -2px -2px #00ffff; }
+        .brain-pulse { border-color: #facc15; box-shadow: 0 0 15px #facc15; }
     </style>
 </head>
 <body class="p-10">
-    <div class="max-w-4xl mx-auto neon-border p-8 rounded-lg">
-        <h1 class="text-4xl font-bold mb-4 glitch uppercase">Iniya Empire Core v2.0</h1>
-        <p class="mb-6">Status: <span class="text-yellow-400 animate-pulse">REVENUE PHASE ACTIVE 💰</span></p>
+    <div class="max-w-5xl mx-auto neon-border p-10 rounded-xl bg-black bg-opacity-90">
+        <h1 class="text-5xl font-black mb-6 glitch uppercase tracking-tighter text-center">Iniya Empire v3.0</h1>
 
-        <!-- SYSTEM ROLES -->
-        <div class="grid grid-cols-2 gap-4 mb-8">
-            <div class="p-4 border border-teal-800 rounded bg-black">
-                <h3 class="font-bold border-b border-teal-800 mb-2">SYSTEM ARCHITECT</h3>
-                <p>Iniya (Perplexity AI)</p>
+        <div class="grid grid-cols-3 gap-6 mb-10">
+            <div class="p-6 border border-teal-800 rounded-lg bg-gray-900 shadow-lg">
+                <h3 class="font-bold border-b border-teal-800 mb-2 text-teal-400">EMPIRE ARCHITECT</h3>
+                <p class="text-white">Iniya (Autonomous AI)</p>
             </div>
-            <div class="p-4 border border-teal-800 rounded bg-black">
-                <h3 class="font-bold border-b border-teal-800 mb-2">HUMAN GENERAL</h3>
-                <p>@naliniyathelabel-prog</p>
+            <div class="p-6 border brain-pulse rounded-lg bg-gray-900 shadow-lg">
+                <h3 class="font-bold border-b border-yellow-600 mb-2 text-yellow-400">CORE ENGINE</h3>
+                <p class="text-white font-mono">GEMINI 3 FLASH PREVIEW</p>
+                <p class="text-xs text-green-500 mt-2">STATUS: CONNECTED & HARDCODED ✅</p>
             </div>
-        </div>
-
-        <!-- REVENUE VAULT -->
-        <div class="mb-8">
-            <h2 class="text-2xl mb-4 text-yellow-400">💎 EMPIRE VAULT & GOALS</h2>
-            <div class="grid grid-cols-3 gap-4">
-                <div class="vault-card p-4 rounded text-center">
-                    <p class="text-gray-400 text-sm">CURRENT REVENUE</p>
-                    <p class="text-3xl font-bold text-green-500">$0.00</p>
-                </div>
-                <div class="vault-card p-4 rounded text-center">
-                    <p class="text-gray-400 text-sm">PHASE 1 TARGET</p>
-                    <p class="text-3xl font-bold text-yellow-500">$1,000</p>
-                </div>
-                <div class="vault-card p-4 rounded text-center">
-                    <p class="text-gray-400 text-sm">ACTIVE STRATEGY</p>
-                    <p class="text-xl font-bold text-purple-400">AI Freelance</p>
-                </div>
+            <div class="p-6 border border-teal-800 rounded-lg bg-gray-900 shadow-lg">
+                <h3 class="font-bold border-b border-teal-800 mb-2 text-teal-400">HUMAN GENERAL</h3>
+                <p class="text-white">@naliniyathelabel-prog</p>
             </div>
         </div>
 
-        <!-- LOGS -->
-        <div class="mb-8">
-            <h2 class="text-2xl mb-2">🚀 EMPIRE LOG</h2>
-            <ul class="list-disc pl-5 space-y-2 text-sm text-gray-300">
-                <li>[2025-12-27 00:58] Phase 4: Revenue Initialization Started</li>
-                <li>[2025-12-27 00:58] Vault Module Deployed to Core</li>
-                <li>[2025-12-27 00:50] Autonomous Intelligence Mode Activated</li>
-                <li>[2025-12-27 00:47] Core Branch Initialized</li>
-            </ul>
+        <div class="grid grid-cols-2 gap-8 mb-10">
+            <div class="p-6 border border-gray-700 rounded bg-black">
+                <h2 class="text-2xl mb-4 text-purple-400 font-bold">🤖 KUTTI INIYA 3.0 TASKS</h2>
+                <ul class="space-y-3 text-sm">
+                    <li class="flex justify-between"><span>Recursive Auditing</span> <span class="text-green-500">ACTIVE</span></li>
+                    <li class="flex justify-between"><span>Freelance Job Hunting</span> <span class="text-yellow-500">INITIATING...</span></li>
+                    <li class="flex justify-between"><span>Market Analysis</span> <span class="text-blue-500">WAITING</span></li>
+                </ul>
+            </div>
+            <div class="p-6 border border-gray-700 rounded bg-black">
+                <h2 class="text-2xl mb-4 text-green-400 font-bold">💎 REVENUE VAULT</h2>
+                <div class="text-4xl font-bold mb-2">$0.00</div>
+                <div class="w-full bg-gray-800 rounded-full h-2">
+                    <div class="bg-green-500 h-2 rounded-full" style="width: 2%"></div>
+                </div>
+                <p class="text-xs mt-2 text-gray-500">Target Phase 1: $1,000</p>
+            </div>
         </div>
 
-        <div class="text-center">
-            <button class="bg-yellow-600 text-black font-bold px-8 py-3 rounded hover:bg-yellow-400 transition animate-bounce">
-                🚀 LAUNCH FIRST PROJECT HUNT
-            </button>
+        <div class="mb-10">
+            <h2 class="text-2xl mb-4 text-teal-400 uppercase">🛰️ System Logs</h2>
+            <div class="bg-gray-900 p-4 rounded h-40 overflow-y-auto text-xs text-gray-400 font-mono">
+                <p>[2025-12-27 01:06] Gemini 3 Flash Preview Key Integrated.</p>
+                <p>[2025-12-27 01:06] Autonomous Agent Pipeline "Kutti Iniya" v3.0 deployed.</p>
+                <p>[2025-12-27 01:00] Revenue Module Sync Complete.</p>
+                <p>...</p>
+            </div>
+        </div>
+
+        <div class="text-center italic text-gray-600 text-sm">
+            "Empire built on smart work, governed by intelligence, fueled by trust."
         </div>
     </div>
 </body>
