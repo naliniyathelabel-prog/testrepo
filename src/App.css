@@ -30,7 +30,6 @@ body {
   overscroll-behavior: none;
 }
 
-/* Prevent zoom on iOS */
 input, textarea, select {
   font-size: 16px !important;
 }
@@ -39,13 +38,12 @@ input, textarea, select {
   display: flex;
   flex-direction: column;
   height: 100vh;
-  height: 100dvh; /* Dynamic viewport height for mobile */
+  height: 100dvh;
   max-width: 100%;
   overflow: hidden;
   position: relative;
 }
 
-/* Header - Fixed with blur effect */
 .header {
   padding: 12px 20px;
   background: rgba(255, 255, 255, 0.95);
@@ -102,7 +100,6 @@ input, textarea, select {
   transform: scale(0.95);
 }
 
-/* Messages Area - Improved scrolling */
 .messages {
   flex: 1;
   overflow-y: auto;
@@ -117,7 +114,6 @@ input, textarea, select {
   overscroll-behavior: contain;
 }
 
-/* Hide scrollbar but keep functionality */
 .messages::-webkit-scrollbar {
   width: 4px;
 }
@@ -154,7 +150,6 @@ input, textarea, select {
   color: var(--text-secondary);
 }
 
-/* Message Bubbles - Enhanced */
 .message {
   display: flex;
   flex-direction: column;
@@ -234,7 +229,6 @@ input, textarea, select {
   50% { opacity: 1; }
 }
 
-/* Input Area - Mobile Optimized */
 .input-container {
   position: fixed;
   bottom: 0;
@@ -353,7 +347,6 @@ input, textarea, select {
   box-shadow: 0 4px 12px rgba(0,0,0,0.2);
 }
 
-/* Modal - Improved */
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -450,7 +443,6 @@ input, textarea, select {
   transform: scale(0.98);
 }
 
-/* Mobile-specific fixes */
 @media (max-width: 768px) {
   .header {
     padding: 10px 16px;
@@ -476,7 +468,6 @@ input, textarea, select {
   }
 }
 
-/* Prevent body scroll when modal is open */
 body.modal-open {
   overflow: hidden;
   position: fixed;
