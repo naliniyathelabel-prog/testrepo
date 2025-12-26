@@ -3,7 +3,8 @@ import './App.css'
 import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai'
 import { openDB, saveMessage, loadMessages, loadRecentEmbeddedMessages, clearMessages } from './db'
 import { getEmbedding, semanticSearch, shouldEmbedAssistant } from './embeddings'
-import { Send, Plus, Search, Mic, Settings, Trash2, Info, X } from 'lucide-react'
+import { Send, Plus, Search, Mic, Settings, Trash2, Info, X, Globe } from 'lucide-react'
+import { searchWeb, researchTopic, formatResearchResults, extractResearchContext } from './webResearch'
 
 const STORAGE_KEY = 'flonestChat'
 
@@ -23,6 +24,8 @@ function App() {
   const [showConfig, setShowConfig] = useState(false)
   const [showDebug, setShowDebug] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [researching, setResearching] = useState(false)
+  const [researchData, setResearchData] = useState(null)
   const [initializing, setInitializing] = useState(true)
   const [debugInfo, setDebugInfo] = useState(null)
 
@@ -107,6 +110,95 @@ function App() {
       threshold: config.threshold
     })
     setShowDebug(true)
+  }
+
+  const handleResearch = async () => {
+    if (!input.trim() || researching) return
+
+    const query = input
+    setInput('')
+    if (textareaRef.current) textareaRef.current.style.height = 'auto'
+
+    setResearching(true)
+
+    // Add user message
+    const userMsg = { role: 'user', text: `🔍 Research: ${query}`, timestamp: Date.now() }
+    setMessages(prev => [...prev, userMsg])
+
+    try {
+      // Perform web research
+      const research = await researchTopic(query, {
+        resultCount: 5,
+        fetchContent: true,
+        maxContentLength: 2000
+      })
+
+      setResearchData(research)
+
+      if (research.success) {
+        // Format and display results
+        const formattedResults = formatResearchResults(research)
+
+        const researchMsg = { 
+          role: 'model', 
+          text: formattedResults,
+          timestamp: Date.now(),
+          isResearch: true
+        }
+
+        setMessages(prev => [...prev, researchMsg])
+
+        // Save to DB
+        await saveMessage(userMsg, null)
+        await saveMessage(researchMsg, null)
+
+        // Now analyze with Gemini if API key is set
+        if (config.apiKey) {
+          setLoading(true)
+
+          const context = extractResearchContext(research)
+          const analysisPrompt = `Based on this web research about "${query}", provide a comprehensive analysis:\n\n${context}\n\nAnalysis:`
+
+          const genAI = new GoogleGenerativeAI(config.apiKey)
+          const model = genAI.getGenerativeModel({ 
+            model: config.model,
+            safetySettings: config.safetyOff ? [
+              { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+              { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
+              { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
+              { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE }
+            ] : undefined
+          })
+
+          const result = await model.generateContent(analysisPrompt)
+          const analysis = result.response.text()
+
+          const analysisMsg = { 
+            role: 'model', 
+            text: `📊 **Deep Analysis:**\n\n${analysis}`,
+            timestamp: Date.now()
+          }
+
+          setMessages(prev => [...prev, analysisMsg])
+          await saveMessage(analysisMsg, null)
+
+          setLoading(false)
+        }
+      } else {
+        throw new Error('Research failed')
+      }
+    } catch (err) {
+      console.error('Research error:', err)
+      const errorMsg = { 
+        role: 'model', 
+        text: '❌ Research failed. Please try again.',
+        timestamp: Date.now()
+      }
+      setMessages(prev => [...prev, errorMsg])
+      await saveMessage(errorMsg, null)
+    } finally {
+      setResearching(false)
+    }
   }
 
   const sendMessage = async () => {
@@ -229,11 +321,22 @@ function App() {
             <div className="bubble">{msg.text}</div>
           </div>
         ))}
+        {researching && (
+          <div className="message model">
+            <span className="message-role">Research Agent</span>
+            <div className="bubble loading">
+              <span>🔍 Searching the web</span>
+              <span style={{animation: 'pulse 1s infinite'}}>.</span>
+              <span style={{animation: 'pulse 1s infinite 0.2s'}}>.</span>
+              <span style={{animation: 'pulse 1s infinite 0.4s'}}>.</span>
+            </div>
+          </div>
+        )}
         {loading && (
           <div className="message model">
             <span className="message-role">Flonest</span>
             <div className="bubble loading">
-              <span>Thinking</span>
+              <span>Analyzing</span>
               <span style={{animation: 'pulse 1s infinite'}}>.</span>
               <span style={{animation: 'pulse 1s infinite 0.2s'}}>.</span>
               <span style={{animation: 'pulse 1s infinite 0.4s'}}>.</span>
@@ -263,7 +366,7 @@ function App() {
           <div className="input-actions">
             <div className="action-group">
               <button className="action-btn" title="Attach"><Plus size={20} /></button>
-              <button className="action-btn" title="Focus"><Search size={20} /></button>
+              <button className="action-btn" onClick={handleResearch} disabled={!input.trim() || researching} title="Web Research"><Globe size={20} /></button>
             </div>
             <div className="action-group">
                <button className="action-btn" title="Voice"><Mic size={20} /></button>
