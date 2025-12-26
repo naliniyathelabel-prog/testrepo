@@ -512,3 +512,231 @@ body.modal-open {
   border-bottom-color: var(--accent);
 }
 
+/* Markdown Content Styling */
+.message-content {
+  width: 100%;
+}
+
+.message-content.markdown h1,
+.message-content.markdown h2,
+.message-content.markdown h3 {
+  margin: 16px 0 8px 0;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.message-content.markdown h1 {
+  font-size: 20px;
+  border-bottom: 2px solid var(--border);
+  padding-bottom: 8px;
+}
+
+.message-content.markdown h2 {
+  font-size: 18px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 6px;
+}
+
+.message-content.markdown h3 {
+  font-size: 16px;
+}
+
+.message-content.markdown p {
+  margin: 8px 0;
+  line-height: 1.6;
+}
+
+.message-content.markdown ul,
+.message-content.markdown ol {
+  margin: 8px 0;
+  padding-left: 24px;
+}
+
+.message-content.markdown li {
+  margin: 4px 0;
+  line-height: 1.5;
+}
+
+.message-content.markdown code {
+  background: rgba(0, 0, 0, 0.05);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+}
+
+.message-content.markdown pre {
+  background: #f6f8fa;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  overflow-x: auto;
+  margin: 12px 0;
+}
+
+.message-content.markdown pre code {
+  background: none;
+  padding: 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.message-content.markdown blockquote {
+  border-left: 3px solid var(--accent);
+  padding-left: 12px;
+  margin: 12px 0;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.message-content.markdown a {
+  color: var(--accent);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(99, 102, 241, 0.3);
+  transition: all 0.2s ease;
+}
+
+.message-content.markdown a:hover {
+  border-bottom-color: var(--accent);
+  background: rgba(99, 102, 241, 0.05);
+}
+
+.message-content.markdown table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 12px 0;
+  font-size: 14px;
+}
+
+.message-content.markdown table th,
+.message-content.markdown table td {
+  border: 1px solid var(--border);
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.message-content.markdown table th {
+  background: var(--bg-secondary);
+  font-weight: 600;
+}
+
+.message-content.markdown table tr:hover {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.message-content.markdown hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 16px 0;
+}
+
+.message-content.markdown strong {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.message-content.markdown em {
+  font-style: italic;
+  color: var(--text-secondary);
+}
+
+/* Code block with copy button */
+.code-block {
+  margin: 12px 0;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+.code-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #f6f8fa;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.code-language {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+}
+
+.copy-btn {
+  background: none;
+  border: 1px solid var(--border);
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.copy-btn:hover {
+  background: var(--bg-primary);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* Plain text formatting */
+.message-content.plain {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+/* Improve numbered lists */
+.message-content.markdown ol {
+  counter-reset: item;
+  list-style: none;
+}
+
+.message-content.markdown ol > li {
+  counter-increment: item;
+  position: relative;
+}
+
+.message-content.markdown ol > li::before {
+  content: counter(item) ".";
+  position: absolute;
+  left: -24px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+/* Better bullet points */
+.message-content.markdown ul > li::marker {
+  color: var(--accent);
+}
+
+/* Inline code in different contexts */
+.user .message-content.markdown code {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.model .message-content.markdown code {
+  background: rgba(99, 102, 241, 0.08);
+  color: var(--accent);
+}
+
+/* Responsive text sizing */
+@media (max-width: 768px) {
+  .message-content.markdown h1 {
+    font-size: 18px;
+  }
+
+  .message-content.markdown h2 {
+    font-size: 16px;
+  }
+
+  .message-content.markdown h3 {
+    font-size: 15px;
+  }
+
+  .message-content.markdown pre code {
+    font-size: 12px;
+  }
+}
+
+

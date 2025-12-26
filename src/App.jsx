@@ -4,7 +4,7 @@ import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/ge
 import { openDB, saveMessage, loadMessages, loadRecentEmbeddedMessages, clearMessages } from './db'
 import { getEmbedding, semanticSearch, shouldEmbedAssistant } from './embeddings'
 import { Send, Plus, Search, Mic, Settings, Trash2, Info, X, Globe } from 'lucide-react'
-import { searchWeb, researchTopic, formatResearchResults, extractResearchContext } from './webResearch'
+import { searchWeb, researchTopic, formatResearchResults, extractResearchContext } from './webResearch'\nimport { MessageContent } from './MessageFormatter'
 
 const STORAGE_KEY = 'flonestChat'
 
@@ -344,7 +344,9 @@ function App() {
         {messages.map((msg, i) => (
           <div key={i} className={`message ${msg.role}`}>
             <span className="message-role">{msg.role === 'user' ? 'You' : 'Flonest'}</span>
-            <div className="bubble">{msg.text}</div>
+            <div className="bubble">
+              <MessageContent text={msg.text} />
+            </div>
           </div>
         ))}
         {researching && (
