@@ -32,6 +32,18 @@ TOOLS = {
         "function": "apply_mobile_fixes",
         "summary": "Apply mobile UX fixes (viewport, 100dvh, safe-area, header blur)",
         "file": "tools/mobile_fix.py"
+    },
+    "gitpush": {
+        "module": "tools.gitpush",
+        "function": "push_to_remote",
+        "summary": "Push changes to remote via Cloudflare auth proxy with GitHub PAT",
+        "file": "tools/gitpush.py"
+    },
+    "gitcommit": {
+        "module": "tools.gitcommit",
+        "function": "commit_and_push",
+        "summary": "Stage all changes, commit, and push to remote using gitpush",
+        "file": "tools/gitcommit.py"
     }
 }
 
@@ -70,12 +82,12 @@ def read_tool(tool_name: str) -> None:
 def use_tool(tool_name: str, root: Path) -> None:
     """Execute a registered tool."""
     if tool_name not in TOOLS:
-        print(f"❌ Unknown tool: {tool_name}")
+        print(f"Unknown tool: {tool_name}")
         list_tools()
         sys.exit(1)
 
     tool = TOOLS[tool_name]
-    print(f"\n▶️  Executing: {tool_name}")
+    print(f"\nExecuting: {tool_name}")
     print(f"   {tool['summary']}\n")
 
     try:
@@ -86,10 +98,10 @@ def use_tool(tool_name: str, root: Path) -> None:
 
         # Execute
         func(root)
-        print(f"\n✅ {tool_name} completed successfully\n")
+        print(f"\n{tool_name} completed successfully\n")
 
     except Exception as e:
-        print(f"\n❌ Error executing {tool_name}: {e}\n")
+        print(f"\nError executing {tool_name}: {e}\n")
         sys.exit(1)
 
 
