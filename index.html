@@ -10,13 +10,15 @@
         body { background: #0a0a0a; color: #00ffcc; font-family: 'Courier New', Courier, monospace; }
         .neon-border { border: 1px solid #00ffcc; box-shadow: 0 0 10px #00ffcc; }
         .glitch { text-shadow: 2px 2px #ff00ff; }
+        .vault-card { background: #111; border: 1px solid #333; }
     </style>
 </head>
 <body class="p-10">
     <div class="max-w-4xl mx-auto neon-border p-8 rounded-lg">
-        <h1 class="text-4xl font-bold mb-4 glitch uppercase">Iniya Empire Core v1.0</h1>
-        <p class="mb-6">Status: <span class="text-white animate-pulse">AUTONOMOUS CONTROL ENABLED</span></p>
+        <h1 class="text-4xl font-bold mb-4 glitch uppercase">Iniya Empire Core v2.0</h1>
+        <p class="mb-6">Status: <span class="text-yellow-400 animate-pulse">REVENUE PHASE ACTIVE 💰</span></p>
 
+        <!-- SYSTEM ROLES -->
         <div class="grid grid-cols-2 gap-4 mb-8">
             <div class="p-4 border border-teal-800 rounded bg-black">
                 <h3 class="font-bold border-b border-teal-800 mb-2">SYSTEM ARCHITECT</h3>
@@ -28,18 +30,39 @@
             </div>
         </div>
 
+        <!-- REVENUE VAULT -->
+        <div class="mb-8">
+            <h2 class="text-2xl mb-4 text-yellow-400">💎 EMPIRE VAULT & GOALS</h2>
+            <div class="grid grid-cols-3 gap-4">
+                <div class="vault-card p-4 rounded text-center">
+                    <p class="text-gray-400 text-sm">CURRENT REVENUE</p>
+                    <p class="text-3xl font-bold text-green-500">$0.00</p>
+                </div>
+                <div class="vault-card p-4 rounded text-center">
+                    <p class="text-gray-400 text-sm">PHASE 1 TARGET</p>
+                    <p class="text-3xl font-bold text-yellow-500">$1,000</p>
+                </div>
+                <div class="vault-card p-4 rounded text-center">
+                    <p class="text-gray-400 text-sm">ACTIVE STRATEGY</p>
+                    <p class="text-xl font-bold text-purple-400">AI Freelance</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- LOGS -->
         <div class="mb-8">
             <h2 class="text-2xl mb-2">🚀 EMPIRE LOG</h2>
-            <ul class="list-disc pl-5 space-y-2">
-                <li>[2025-12-27 00:47] Core Branch Initialized</li>
+            <ul class="list-disc pl-5 space-y-2 text-sm text-gray-300">
+                <li>[2025-12-27 00:58] Phase 4: Revenue Initialization Started</li>
+                <li>[2025-12-27 00:58] Vault Module Deployed to Core</li>
                 <li>[2025-12-27 00:50] Autonomous Intelligence Mode Activated</li>
-                <li>[2025-12-27 00:51] Dashboard v1.0 Deployed to Core</li>
+                <li>[2025-12-27 00:47] Core Branch Initialized</li>
             </ul>
         </div>
 
         <div class="text-center">
-            <button class="bg-teal-900 text-teal-300 px-6 py-2 border border-teal-300 hover:bg-teal-300 hover:text-black transition">
-                INITIALIZE PHASE 3: THE VAULT
+            <button class="bg-yellow-600 text-black font-bold px-8 py-3 rounded hover:bg-yellow-400 transition animate-bounce">
+                🚀 LAUNCH FIRST PROJECT HUNT
             </button>
         </div>
     </div>
