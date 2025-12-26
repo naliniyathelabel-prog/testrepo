@@ -1,0 +1,498 @@
+import { useState, useEffect, useRef } from 'react'
+import './App.css'
+import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai'
+import { openDB, saveMessage, loadMessages, loadRecentEmbeddedMessages, clearMessages } from './db'
+import { getEmbedding, semanticSearch, shouldEmbedAssistant } from './embeddings'
+import { Send, Plus, Search, Mic, Settings, Trash2, Info, X, Globe } from 'lucide-react'
+import { searchWeb, researchTopic, formatResearchResults, extractResearchContext } from './webResearch'\nimport { MessageContent } from './MessageFormatter'
+
+const STORAGE_KEY = 'flonestChat'
+
+function App() {
+  const [messages, setMessages] = useState([])
+  const [input, setInput] = useState('')
+  const [config, setConfig] = useState({
+    systemPrompt: '',
+    apiKey: '',
+    model: 'gemini-3-flash-preview',
+    safetyOff: true,
+    enableEmbeddings: true,
+    semanticMode: true, 
+    contextWindow: 6,
+    threshold: 0.75
+  })
+  const [showConfig, setShowConfig] = useState(false)
+  const [showDebug, setShowDebug] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [researching, setResearching] = useState(false)
+  const [researchData, setResearchData] = useState(null)
+  const [initializing, setInitializing] = useState(true)
+  const [debugInfo, setDebugInfo] = useState(null)
+
+  const messagesEndRef = useRef(null)
+  const textareaRef = useRef(null)
+
+  useEffect(() => {
+    const init = async () => {
+      const stored = localStorage.getItem(STORAGE_KEY)
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored)
+          setConfig(prev => ({ ...prev, ...parsed }))
+        } catch {}
+      }
+
+      try {
+        await openDB()
+        const saved = await loadMessages()
+        if (saved.length > 0) {
+          setMessages(saved.map(m => ({ 
+            role: m.role, 
+            text: m.text, 
+            embedding: m.embedding,
+            timestamp: m.timestamp
+          })))
+        }
+      } catch (err) {
+        console.error('Failed to load messages:', err)
+      }
+
+      setInitializing(false)
+    }
+    init()
+  }, [])
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages, loading])
+
+  // Auto-resize textarea
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto'
+      textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px'
+    }
+  }, [input])
+
+  // Prevent body scroll when modal is open
+  useEffect(() => {
+    if (showConfig || showDebug) {
+      document.body.classList.add('modal-open')
+    } else {
+      document.body.classList.remove('modal-open')
+    }
+    return () => document.body.classList.remove('modal-open')
+  }, [showConfig, showDebug])
+
+  const saveConfig = (newConfig) => {
+    setConfig(newConfig)
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(newConfig))
+    setShowConfig(false)
+  }
+
+  const handleClearChat = async () => {
+    if (confirm('Clear all messages? This cannot be undone.')) {
+      await clearMessages()
+      setMessages([])
+    }
+  }
+
+  const handleDebug = async () => {
+    const stored = await loadMessages()
+    const withEmbeddings = stored.filter(m => m.embedding && m.embedding.length > 0)
+
+    setDebugInfo({
+      totalMessages: stored.length,
+      withEmbeddings: withEmbeddings.length,
+      storageSize: new Blob([JSON.stringify(stored)]).size,
+      semanticMode: config.semanticMode,
+      topK: config.contextWindow,
+      threshold: config.threshold
+    })
+    setShowDebug(true)
+  }
+
+  const handleResearch = async () => {
+    if (!input.trim() || researching || loading) return
+
+    const query = input.trim()
+    setInput('')
+    if (textareaRef.current) textareaRef.current.style.height = 'auto'
+
+    setResearching(true)
+
+    // Add user message
+    const userMsg = { role: 'user', text: `🔍 Research: ${query}`, timestamp: Date.now() }
+    setMessages(prev => [...prev, userMsg])
+
+    try {
+      console.log('Starting research for:', query)
+
+      // Perform web research
+      const research = await researchTopic(query, {
+        resultCount: 5,
+        fetchContent: true,
+        maxContentLength: 2000
+      })
+
+      console.log('Research completed:', research)
+      setResearchData(research)
+
+      if (research.success && research.sources.length > 0) {
+        // Save user message
+        await saveMessage(userMsg, null)
+
+        // Format and display results
+        const formattedResults = formatResearchResults(research)
+
+        const researchMsg = { 
+          role: 'model', 
+          text: formattedResults,
+          timestamp: Date.now(),
+          isResearch: true
+        }
+
+        setMessages(prev => [...prev, researchMsg])
+        await saveMessage(researchMsg, null)
+
+        // Analyze with Gemini if API key is set
+        if (config.apiKey) {
+          setResearching(false)
+          setLoading(true)
+
+          try {
+            const context = extractResearchContext(research)
+            const analysisPrompt = `Based on this web research about "${query}", provide a comprehensive analysis and summary:\n\n${context}\n\nProvide a clear, concise analysis:`
+
+            const genAI = new GoogleGenerativeAI(config.apiKey)
+            const model = genAI.getGenerativeModel({ 
+              model: config.model,
+              safetySettings: config.safetyOff ? [
+                { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+                { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
+                { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
+                { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE }
+              ] : undefined
+            })
+
+            const result = await model.generateContent(analysisPrompt)
+            const analysis = result.response.text()
+
+            const analysisMsg = { 
+              role: 'model', 
+              text: `📊 **AI Analysis:**\n\n${analysis}`,
+              timestamp: Date.now()
+            }
+
+            setMessages(prev => [...prev, analysisMsg])
+            await saveMessage(analysisMsg, null)
+          } catch (aiError) {
+            console.error('AI analysis error:', aiError)
+            const errorMsg = { 
+              role: 'model', 
+              text: '⚠️ Research completed but AI analysis failed. You can still see the sources above.',
+              timestamp: Date.now()
+            }
+            setMessages(prev => [...prev, errorMsg])
+            await saveMessage(errorMsg, null)
+          } finally {
+            setLoading(false)
+          }
+        }
+      } else {
+        // Research failed or no results
+        const errorText = research.error || 'No results found. Try a different query.'
+        const errorMsg = { 
+          role: 'model', 
+          text: `❌ ${errorText}`,
+          timestamp: Date.now()
+        }
+        setMessages(prev => [...prev, errorMsg])
+        await saveMessage(userMsg, null)
+        await saveMessage(errorMsg, null)
+      }
+    } catch (err) {
+      console.error('Research error:', err)
+      const errorMsg = { 
+        role: 'model', 
+        text: `❌ Research failed: ${err.message || 'Unknown error'}\n\nPlease check your internet connection and try again.`,
+        timestamp: Date.now()
+      }
+      setMessages(prev => [...prev, errorMsg])
+      await saveMessage(userMsg, null)
+      await saveMessage(errorMsg, null)
+    } finally {
+      setResearching(false)
+      setLoading(false)
+    }
+  }
+
+  const sendMessage = async () => {
+    if (!input.trim() || loading) return
+
+    if (!config.apiKey) {
+      alert('Please set your Gemini API key first (tap Settings)')
+      return
+    }
+
+    const currentInput = input
+    setInput('')
+    if (textareaRef.current) textareaRef.current.style.height = 'auto'
+
+    setLoading(true)
+
+    // 1. Prepare User Message (Optimistic)
+    const userMsg = { role: 'user', text: currentInput, timestamp: Date.now() }
+    setMessages(prev => [...prev, userMsg])
+
+    try {
+      // 2. Generate Embedding
+      let userEmbedding = null
+      if (config.enableEmbeddings) {
+        userEmbedding = await getEmbedding(currentInput, config.apiKey)
+      }
+
+      // 3. SEMANTIC SEARCH (Bounded V2)
+      let history = []
+
+      if (config.semanticMode && userEmbedding) {
+        const candidates = await loadRecentEmbeddedMessages(200)
+        const relevant = semanticSearch(userEmbedding, candidates, {
+          topK: config.contextWindow,
+          threshold: config.threshold
+        })
+        console.log('🧠 V2 Retrieval:', relevant.length, 'messages')
+
+        history = relevant.map(m => ({
+          role: m.role === 'user' ? 'user' : 'model',
+          parts: [{ text: m.text }]
+        }))
+      } else {
+        history = messages.slice(-10).map(m => ({
+          role: m.role === 'user' ? 'user' : 'model',
+          parts: [{ text: m.text }]
+        }))
+      }
+
+      // 4. Gemini Call
+      const genAI = new GoogleGenerativeAI(config.apiKey)
+      const model = genAI.getGenerativeModel({ 
+        model: config.model,
+        safetySettings: config.safetyOff ? [
+          { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+          { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
+          { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
+          { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE }
+        ] : undefined
+      })
+
+      const chat = model.startChat({ history })
+      const result = await chat.sendMessage(currentInput)
+      const response = result.response.text()
+
+      // 5. Save USER message (Post-retrieval)
+      await saveMessage(userMsg, userEmbedding)
+
+      // 6. Save ASSISTANT message
+      const modelMsg = { role: 'model', text: response, timestamp: Date.now() }
+      setMessages(prev => [...prev, modelMsg])
+
+      let modelEmbedding = null
+      if (config.enableEmbeddings && shouldEmbedAssistant(response)) {
+        modelEmbedding = await getEmbedding(response, config.apiKey)
+      }
+
+      await saveMessage(modelMsg, modelEmbedding)
+
+    } catch (err) {
+      console.error('Gemini API Error:', err)
+      const errorMsg = { 
+        role: 'model', 
+        text: '❌ Error: ' + (err.message || 'Failed to get response.'),
+        timestamp: Date.now()
+      }
+      setMessages(prev => [...prev, errorMsg])
+      await saveMessage(errorMsg, null)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (initializing) return null
+
+  return (
+    <div className="app">
+      <header className="header">
+        <div>
+          <h1>Flonest</h1>
+          <span className="subtitle">{config.model.split('-')[1]} • V2 Pipeline</span>
+        </div>
+        <div className="header-actions">
+          <button className="icon-btn" onClick={handleDebug} title="Debug info"><Info size={20} /></button>
+          <button className="icon-btn" onClick={handleClearChat} title="Clear chat"><Trash2 size={20} /></button>
+          <button className="icon-btn" onClick={() => setShowConfig(true)} title="Settings"><Settings size={20} /></button>
+        </div>
+      </header>
+
+      <div className="messages">
+        {messages.length === 0 && (
+          <div className="empty">
+            <h2>Where knowledge begins</h2>
+            <p>Ask anything • Powered by Gemini 3.0</p>
+          </div>
+        )}
+        {messages.map((msg, i) => (
+          <div key={i} className={`message ${msg.role}`}>
+            <span className="message-role">{msg.role === 'user' ? 'You' : 'Flonest'}</span>
+            <div className="bubble">
+              <MessageContent text={msg.text} />
+            </div>
+          </div>
+        ))}
+        {researching && (
+          <div className="message model">
+            <span className="message-role">Research Agent</span>
+            <div className="bubble loading">
+              <span>🔍 Searching the web</span>
+              <span style={{animation: 'pulse 1s infinite'}}>.</span>
+              <span style={{animation: 'pulse 1s infinite 0.2s'}}>.</span>
+              <span style={{animation: 'pulse 1s infinite 0.4s'}}>.</span>
+            </div>
+          </div>
+        )}
+        {loading && (
+          <div className="message model">
+            <span className="message-role">Flonest</span>
+            <div className="bubble loading">
+              <span>Analyzing</span>
+              <span style={{animation: 'pulse 1s infinite'}}>.</span>
+              <span style={{animation: 'pulse 1s infinite 0.2s'}}>.</span>
+              <span style={{animation: 'pulse 1s infinite 0.4s'}}>.</span>
+            </div>
+          </div>
+        )}
+        <div ref={messagesEndRef} />
+      </div>
+
+      <div className="input-container">
+        <div className="input-box">
+          <textarea
+            ref={textareaRef}
+            className="input-textarea"
+            placeholder="Ask anything..."
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault()
+                sendMessage()
+              }
+            }}
+            rows={1}
+            disabled={loading}
+          />
+          <div className="input-actions">
+            <div className="action-group">
+              <button className="action-btn" title="Attach"><Plus size={20} /></button>
+              <button className="action-btn" onClick={handleResearch} disabled={!input.trim() || researching} title="Web Research"><Globe size={20} /></button>
+            </div>
+            <div className="action-group">
+               <button className="action-btn" title="Voice"><Mic size={20} /></button>
+               <button 
+                className="send-btn" 
+                onClick={sendMessage} 
+                disabled={!input.trim() || loading}
+              >
+                <Send size={16} />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {showConfig && (
+        <ConfigModal 
+          config={config} 
+          onSave={saveConfig} 
+          onClose={() => setShowConfig(false)} 
+        />
+      )}
+
+      {showDebug && debugInfo && (
+        <DebugModal 
+          info={debugInfo}
+          onClose={() => setShowDebug(false)}
+        />
+      )}
+    </div>
+  )
+}
+
+function ConfigModal({ config, onSave, onClose }) {
+  const [apiKey, setApiKey] = useState(config.apiKey)
+  const [model, setModel] = useState(config.model)
+  const [threshold, setThreshold] = useState(config.threshold || 0.75)
+
+  const handleSave = () => {
+    onSave({ ...config, apiKey, model, threshold })
+  }
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={e => e.stopPropagation()}>
+        <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'20px'}}>
+          <h2>Settings</h2>
+          <button className="icon-btn" onClick={onClose}><X size={20}/></button>
+        </div>
+
+        <label>Gemini Model</label>
+        <select value={model} onChange={e => setModel(e.target.value)} style={{width:'100%', padding:'10px', marginBottom:'16px', borderRadius:'8px', border:'1px solid #ddd'}}>
+          <option value="gemini-3-flash-preview">⚡ Gemini 3 Flash</option>
+          <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+          <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
+        </select>
+
+        <label>API Key</label>
+        <input 
+          type="password" 
+          value={apiKey} 
+          onChange={e => setApiKey(e.target.value)}
+          style={{width:'100%', padding:'10px', marginBottom:'16px', borderRadius:'8px', border:'1px solid #ddd'}}
+        />
+
+        <label>Similarity Threshold ({threshold})</label>
+        <input 
+          type="range" min="0.5" max="0.95" step="0.05" 
+          value={threshold} 
+          onChange={e => setThreshold(parseFloat(e.target.value))} 
+          style={{width:'100%', marginBottom:'24px'}}
+        />
+
+        <div className="modal-actions">
+          <button onClick={handleSave} className="btn-primary">Save Changes</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function DebugModal({ info, onClose }) {
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={e => e.stopPropagation()}>
+         <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'20px'}}>
+          <h2>Debug Stats</h2>
+          <button className="icon-btn" onClick={onClose}><X size={20}/></button>
+        </div>
+        <div style={{background:'#f8f9fa', padding:'16px', borderRadius:'8px'}}>
+          <p><strong>Total Msgs:</strong> {info.totalMessages}</p>
+          <p><strong>Embedded:</strong> {info.withEmbeddings}</p>
+          <p><strong>Size:</strong> {(info.storageSize/1024).toFixed(1)} KB</p>
+          <p><strong>Threshold:</strong> {info.threshold}</p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default App
